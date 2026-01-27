@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 import jwt
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from enum import Enum
 
 ROOT_DIR = Path(__file__).parent
