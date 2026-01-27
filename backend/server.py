@@ -292,6 +292,197 @@ async def get_dashboard_statistics(current_user: dict = Depends(get_current_user
         "total_kennels": total_kennels
     }
 
+# ==================== MEDICINE MANAGEMENT ====================
+from models import Medicine, MedicineCreate, MedicineStockAdd
+
+@api_router.post("/medicines", response_model=Medicine)
+async def create_medicine(
+    medicine_data: MedicineCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new medicine"""
+    medicine_dict = medicine_data.model_dump()
+    medicine_dict["id"] = str(uuid.uuid4())
+    medicine_dict["current_stock"] = 0.0
+    medicine_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.medicines.insert_one(medicine_dict)
+    medicine_dict['created_at'] = datetime.fromisoformat(medicine_dict['created_at'])
+    return Medicine(**medicine_dict)
+
+@api_router.get("/medicines", response_model=List[Medicine])
+async def get_medicines(current_user: dict = Depends(get_current_user)):
+    """Get all medicines"""
+    medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+    for med in medicines:
+        if isinstance(med.get('created_at'), str):
+            med['created_at'] = datetime.fromisoformat(med['created_at'])
+    return medicines
+
+@api_router.post("/medicines/stock/add")
+async def add_medicine_stock(
+    stock_data: MedicineStockAdd,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add medicine stock"""
+    result = await db.medicines.update_one(
+        {"id": stock_data.medicine_id},
+        {"$inc": {"current_stock": stock_data.quantity}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Medicine not found")
+    
+    return {"message": "Stock added successfully", "quantity": stock_data.quantity}
+
+# ==================== FOOD MANAGEMENT ====================
+from models import FoodItem, FoodItemCreate, FoodStockAdd
+
+@api_router.post("/food-items", response_model=FoodItem)
+async def create_food_item(
+    food_data: FoodItemCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new food item"""
+    food_dict = food_data.model_dump()
+    food_dict["id"] = str(uuid.uuid4())
+    food_dict["current_stock"] = 0.0
+    food_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.food_items.insert_one(food_dict)
+    food_dict['created_at'] = datetime.fromisoformat(food_dict['created_at'])
+    return FoodItem(**food_dict)
+
+@api_router.get("/food-items", response_model=List[FoodItem])
+async def get_food_items(current_user: dict = Depends(get_current_user)):
+    """Get all food items"""
+    items = await db.food_items.find({}, {"_id": 0}).to_list(None)
+    for item in items:
+        if isinstance(item.get('created_at'), str):
+            item['created_at'] = datetime.fromisoformat(item['created_at'])
+    return items
+
+@api_router.post("/food-items/stock/add")
+async def add_food_stock(
+    stock_data: FoodStockAdd,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add food stock"""
+    result = await db.food_items.update_one(
+        {"id": stock_data.food_id},
+        {"$inc": {"current_stock": stock_data.quantity}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Food item not found")
+    
+    return {"message": "Stock added successfully", "quantity": stock_data.quantity}
+
+# ==================== KENNEL MANAGEMENT ====================
+
+@api_router.get("/kennels")
+async def get_kennels(
+    status_filter: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all kennels or filter by status"""
+    query = {}
+    if status_filter == "available":
+        query["is_occupied"] = False
+    elif status_filter == "occupied":
+        query["is_occupied"] = True
+    
+    kennels = await db.kennels.find(query, {"_id": 0}).sort("kennel_number", 1).to_list(None)
+    return kennels
+
+@api_router.post("/kennels/initialize")
+async def initialize_kennels(current_user: dict = Depends(get_current_user)):
+    """Initialize kennels (run once)"""
+    config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+    max_kennels = config.get("max_kennels", 300) if config else 300
+    
+    existing = await db.kennels.count_documents({})
+    if existing > 0:
+        return {"message": f"{existing} kennels already exist"}
+    
+    kennels = []
+    for i in range(1, max_kennels + 1):
+        kennel = {
+            "id": str(uuid.uuid4()),
+            "kennel_number": i,
+            "is_occupied": False,
+            "current_case_id": None,
+            "last_updated": datetime.now(timezone.utc).isoformat()
+        }
+        kennels.append(kennel)
+    
+    if kennels:
+        await db.kennels.insert_many(kennels)
+    
+    return {"message": f"Initialized {len(kennels)} kennels"}
+
+# ==================== CASE MANAGEMENT ====================
+
+@api_router.post("/cases/catching")
+async def create_catching_record(
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a catching record"""
+    from utils import get_next_case_number
+    
+    config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+    project_code = config.get("project_code", "JAPP") if config else "JAPP"
+    case_number = await get_next_case_number(db, project_code)
+    
+    case_dict = {
+        "id": str(uuid.uuid4()),
+        "case_number": case_number,
+        "status": CaseStatus.CAUGHT.value,
+        "project_code": project_code,
+        "catching": {
+            "date_time": data.get("date_time", datetime.now(timezone.utc).isoformat()),
+            "location_lat": data["location_lat"],
+            "location_lng": data["location_lng"],
+            "address": data["address"],
+            "ward_number": data.get("ward_number"),
+            "photo_base64": data["photo_base64"],
+            "remarks": data.get("remarks"),
+            "driver_id": current_user["id"]
+        },
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.cases.insert_one(case_dict)
+    logger.info(f"Case created: {case_number}")
+    
+    return {"case_number": case_number, "case_id": case_dict["id"], "message": "Case created successfully"}
+
+@api_router.get("/cases")
+async def get_cases(
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all cases"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    cases = await db.cases.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return cases
+
+@api_router.get("/cases/{case_id}")
+async def get_case(
+    case_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a specific case"""
+    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return case
+
 # Include the router in the main app
 app.include_router(api_router)
 
