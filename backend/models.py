@@ -2,7 +2,7 @@
 Database models for ABC Program Management System
 """
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 from enum import Enum
 import uuid
