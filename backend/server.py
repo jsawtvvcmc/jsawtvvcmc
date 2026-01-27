@@ -224,6 +224,74 @@ async def get_system_config():
 async def root():
     return {"message": "ABC Program Management System API", "version": "1.0"}
 
+# ==================== USER MANAGEMENT ====================
+
+@api_router.post("/users", response_model=User)
+async def create_user(
+    user_data: UserCreate,
+    current_user: dict = Depends(lambda creds: require_roles([UserRole.SUPER_USER, UserRole.ADMIN])(creds))
+):
+    """Create a new user"""
+    from utils import generate_password
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": user_data.email}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Generate password
+    password = generate_password(user_data.first_name, user_data.mobile)
+    
+    # Create user
+    user_dict = user_data.model_dump()
+    user_dict["id"] = str(uuid.uuid4())
+    user_dict["password_hash"] = hash_password(password)
+    user_dict["is_active"] = True
+    user_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.users.insert_one(user_dict)
+    logger.info(f"User created: {user_data.email}, Password: {password}")
+    
+    user_dict.pop("password_hash")
+    user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
+    return User(**user_dict)
+
+@api_router.get("/users", response_model=List[User])
+async def get_users(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all users"""
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(None)
+    for user in users:
+        if isinstance(user.get('created_at'), str):
+            user['created_at'] = datetime.fromisoformat(user['created_at'])
+    return users
+
+# ==================== STATISTICS ====================
+
+@api_router.get("/statistics/dashboard")
+async def get_dashboard_statistics(current_user: dict = Depends(get_current_user)):
+    """Get dashboard statistics"""
+    total_cases = await db.cases.count_documents({})
+    active_cases = await db.cases.count_documents({"status": {"$nin": [
+        CaseStatus.RELEASED.value,
+        CaseStatus.DECEASED.value,
+        CaseStatus.SURGERY_CANCELLED.value
+    ]}})
+    
+    total_surgeries = await db.cases.count_documents({"surgery": {"$exists": True}})
+    occupied_kennels = await db.kennels.count_documents({"is_occupied": True})
+    total_kennels = await db.kennels.count_documents({})
+    
+    return {
+        "total_cases": total_cases,
+        "active_cases": active_cases,
+        "total_surgeries": total_surgeries,
+        "occupied_kennels": occupied_kennels,
+        "available_kennels": total_kennels - occupied_kennels,
+        "total_kennels": total_kennels
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
