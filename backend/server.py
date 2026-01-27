@@ -134,7 +134,7 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     user: User
 
-# Startup event to create default super user
+# Startup event to create default super user and configuration
 @app.on_event("startup")
 async def create_default_superuser():
     """Create default super user if not exists"""
@@ -157,6 +157,22 @@ async def create_default_superuser():
         logger.info(f"Default super user created: {default_email}")
     else:
         logger.info(f"Default super user already exists: {default_email}")
+    
+    # Create default system configuration
+    existing_config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+    if not existing_config:
+        default_config = {
+            "id": "system_config",
+            "organization_name": "Janice's Trust",
+            "registered_office": "A hilltop haven for animals",
+            "project_name": "ABC Program",
+            "project_code": "JAPP",
+            "project_address": "",
+            "max_kennels": 300,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.system_config.insert_one(default_config)
+        logger.info("Default system configuration created")
 
 # Authentication Routes
 @api_router.post("/auth/login", response_model=LoginResponse)
