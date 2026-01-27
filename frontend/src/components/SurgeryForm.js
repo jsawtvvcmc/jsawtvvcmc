@@ -342,33 +342,32 @@ const SurgeryForm = () => {
               )}
             </div>
 
-            {/* Medicine Dosages */}
-            {formData.cancelled === 'No' && formData.weight && (
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h3 className="font-bold text-lg mb-4">Auto-Calculated Medicine Dosages</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div><Label>ARV:</Label><Input type="number" step="0.01" value={formData.arv} onChange={(e) => setFormData({...formData, arv: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Xylazine:</Label><Input type="number" step="0.01" value={formData.xylazine} onChange={(e) => setFormData({...formData, xylazine: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Melonex:</Label><Input type="number" step="0.01" value={formData.melonex} onChange={(e) => setFormData({...formData, melonex: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Atropine:</Label><Input type="number" step="0.01" value={formData.atropine} onChange={(e) => setFormData({...formData, atropine: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Diazepam:</Label><Input type="number" step="0.01" value={formData.diazepam} onChange={(e) => setFormData({...formData, diazepam: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Prednisolone:</Label><Input type="number" step="0.01" value={formData.prednisolone} onChange={(e) => setFormData({...formData, prednisolone: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Ketamine:</Label><Input type="number" step="0.01" value={formData.ketamine} onChange={(e) => setFormData({...formData, ketamine: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Tribivet:</Label><Input type="number" step="0.01" value={formData.tribivet} onChange={(e) => setFormData({...formData, tribivet: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Intacef tazo (mg):</Label><Input type="number" step="1" value={formData.intacef_tazo} onChange={(e) => setFormData({...formData, intacef_tazo: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Adrenaline:</Label><Input type="number" step="0.01" value={formData.adrenaline} onChange={(e) => setFormData({...formData, adrenaline: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Alu spray:</Label><Input type="number" step="0.01" value={formData.alu_spray} onChange={(e) => setFormData({...formData, alu_spray: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Ethamsylate:</Label><Input type="number" step="0.01" value={formData.ethamsylate} onChange={(e) => setFormData({...formData, ethamsylate: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Tincture:</Label><Input type="number" step="1" value={formData.tincture} onChange={(e) => setFormData({...formData, tincture: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Avil:</Label><Input type="number" step="0.01" value={formData.avil} onChange={(e) => setFormData({...formData, avil: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Vicryl 1 (pc):</Label><Input type="number" step="0.01" value={formData.vicryl_1} onChange={(e) => setFormData({...formData, vicryl_1: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Catgut (pc):</Label><Input type="number" step="0.01" value={formData.catgut} onChange={(e) => setFormData({...formData, catgut: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Vicryl 2 (pc):</Label><Input type="number" step="0.01" value={formData.vicryl_2} onChange={(e) => setFormData({...formData, vicryl_2: parseFloat(e.target.value)})} disabled={gender !== 'Female'} /></div>
-                  <div><Label>Metrinedasol:</Label><Input type="number" step="1" value={formData.metrinedasol} onChange={(e) => setFormData({...formData, metrinedasol: parseFloat(e.target.value)})} /></div>
-                  <div><Label>Ketamine-Diazepam:</Label><Input type="number" step="0.01" value={formData.ketamine_diazepam} onChange={(e) => setFormData({...formData, ketamine_diazepam: parseFloat(e.target.value)})} placeholder="Manual entry" /></div>
-                </div>
+            {/* Medicine Dosages - Always visible and editable */}
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-bold text-lg mb-4">Medicine Dosages (Auto-calculated or Manual Entry)</h3>
+              <p className="text-sm text-gray-600 mb-3">Enter weight (10-30kg) to auto-calculate, or enter manually</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div><Label>ARV (ml):</Label><Input type="number" step="0.01" value={formData.arv} onChange={(e) => setFormData({...formData, arv: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Xylazine (ml):</Label><Input type="number" step="0.01" value={formData.xylazine} onChange={(e) => setFormData({...formData, xylazine: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Melonex (ml):</Label><Input type="number" step="0.01" value={formData.melonex} onChange={(e) => setFormData({...formData, melonex: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Atropine (ml):</Label><Input type="number" step="0.01" value={formData.atropine} onChange={(e) => setFormData({...formData, atropine: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Diazepam (ml):</Label><Input type="number" step="0.01" value={formData.diazepam} onChange={(e) => setFormData({...formData, diazepam: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Prednisolone (ml):</Label><Input type="number" step="0.01" value={formData.prednisolone} onChange={(e) => setFormData({...formData, prednisolone: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Ketamine (ml):</Label><Input type="number" step="0.01" value={formData.ketamine} onChange={(e) => setFormData({...formData, ketamine: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Tribivet (ml):</Label><Input type="number" step="0.01" value={formData.tribivet} onChange={(e) => setFormData({...formData, tribivet: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Intacef tazo (mg):</Label><Input type="number" step="1" value={formData.intacef_tazo} onChange={(e) => setFormData({...formData, intacef_tazo: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Adrenaline (ml):</Label><Input type="number" step="0.01" value={formData.adrenaline} onChange={(e) => setFormData({...formData, adrenaline: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Alu spray (ml):</Label><Input type="number" step="0.01" value={formData.alu_spray} onChange={(e) => setFormData({...formData, alu_spray: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Ethamsylate (ml):</Label><Input type="number" step="0.01" value={formData.ethamsylate} onChange={(e) => setFormData({...formData, ethamsylate: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Tincture (ml):</Label><Input type="number" step="1" value={formData.tincture} onChange={(e) => setFormData({...formData, tincture: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Avil (ml):</Label><Input type="number" step="0.01" value={formData.avil} onChange={(e) => setFormData({...formData, avil: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Vicryl 1 (pc):</Label><Input type="number" step="0.01" value={formData.vicryl_1} onChange={(e) => setFormData({...formData, vicryl_1: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Catgut (pc):</Label><Input type="number" step="0.01" value={formData.catgut} onChange={(e) => setFormData({...formData, catgut: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Vicryl 2 (pc) {gender === 'Female' ? '' : '(Female only)'}:</Label><Input type="number" step="0.01" value={formData.vicryl_2} onChange={(e) => setFormData({...formData, vicryl_2: parseFloat(e.target.value) || 0})} className={gender !== 'Female' ? 'bg-gray-100' : ''} /></div>
+                <div><Label>Metrinedasol (ml):</Label><Input type="number" step="1" value={formData.metrinedasol} onChange={(e) => setFormData({...formData, metrinedasol: parseFloat(e.target.value) || 0})} /></div>
+                <div><Label>Ketamine-Diazepam (ml):</Label><Input type="number" step="0.01" value={formData.ketamine_diazepam} onChange={(e) => setFormData({...formData, ketamine_diazepam: parseFloat(e.target.value) || 0})} placeholder="Manual entry" /></div>
               </div>
-            )}
+            </div>
 
             <Button 
               type="submit" 
