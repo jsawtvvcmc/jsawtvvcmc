@@ -224,6 +224,10 @@ async def get_system_config():
 async def root():
     return {"message": "ABC Program Management System API", "version": "1.0"}
 
+# Import and include additional routes
+from routes import router as additional_routes
+api_router.include_router(additional_routes)
+
 # Include the router in the main app
 app.include_router(api_router)
 
