@@ -484,6 +484,270 @@ async def get_case(
         raise HTTPException(status_code=404, detail="Case not found")
     return case
 
+@api_router.post("/cases/{case_id}/initial-observation")
+async def add_initial_observation(
+    case_id: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add initial observation to a case"""
+    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Check if kennel is available
+    kennel = await db.kennels.find_one({"kennel_number": data["kennel_number"]}, {"_id": 0})
+    if not kennel or kennel["is_occupied"]:
+        raise HTTPException(status_code=400, detail="Kennel not available")
+    
+    # Update case
+    observation = {
+        "kennel_number": data["kennel_number"],
+        "gender": data["gender"],
+        "approximate_age": data["approximate_age"],
+        "color_markings": data["color_markings"],
+        "body_condition": data["body_condition"],
+        "temperament": data["temperament"],
+        "visible_injuries": data["visible_injuries"],
+        "injury_description": data.get("injury_description"),
+        "photo_base64": data["photo_base64"],
+        "remarks": data.get("remarks"),
+        "catcher_id": current_user["id"],
+        "observation_date": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.cases.update_one(
+        {"id": case_id},
+        {
+            "$set": {
+                "initial_observation": observation,
+                "status": CaseStatus.IN_KENNEL.value,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    # Update kennel
+    await db.kennels.update_one(
+        {"kennel_number": data["kennel_number"]},
+        {
+            "$set": {
+                "is_occupied": True,
+                "current_case_id": case_id,
+                "last_updated": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {"message": "Initial observation added successfully"}
+
+@api_router.post("/cases/{case_id}/surgery")
+async def add_surgery_record(
+    case_id: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add surgery record to a case"""
+    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    surgery = {
+        "surgery_date": data.get("surgery_date", datetime.now(timezone.utc).isoformat()),
+        "pre_surgery_status": data["pre_surgery_status"],
+        "cancellation_reason": data.get("cancellation_reason"),
+        "surgery_type": data.get("surgery_type"),
+        "anesthesia_used": data.get("anesthesia_used", []),
+        "surgery_start_time": data.get("surgery_start_time"),
+        "surgery_end_time": data.get("surgery_end_time"),
+        "complications": data.get("complications", False),
+        "complication_description": data.get("complication_description"),
+        "post_surgery_status": data.get("post_surgery_status"),
+        "veterinary_signature": data["veterinary_signature"],
+        "remarks": data.get("remarks"),
+        "veterinary_id": current_user["id"]
+    }
+    
+    # Determine new status
+    if data["pre_surgery_status"] == "Cancel Surgery":
+        new_status = CaseStatus.SURGERY_CANCELLED.value
+        # Free kennel if cancelled
+        if case.get("initial_observation"):
+            kennel_number = case["initial_observation"]["kennel_number"]
+            await db.kennels.update_one(
+                {"kennel_number": kennel_number},
+                {
+                    "$set": {
+                        "is_occupied": False,
+                        "current_case_id": None,
+                        "last_updated": datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+    else:
+        new_status = CaseStatus.SURGERY_COMPLETED.value
+        # Deduct medicine stock for anesthesia
+        for medicine_id in data.get("anesthesia_used", []):
+            await db.medicines.update_one(
+                {"id": medicine_id},
+                {"$inc": {"current_stock": -1}}
+            )
+    
+    await db.cases.update_one(
+        {"id": case_id},
+        {
+            "$set": {
+                "surgery": surgery,
+                "status": new_status,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {"message": "Surgery record added successfully", "status": new_status}
+
+@api_router.post("/cases/{case_id}/treatment")
+async def add_daily_treatment(
+    case_id: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add daily treatment record"""
+    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    treatment = {
+        "id": str(uuid.uuid4()),
+        "case_id": case_id,
+        "date": data.get("date", datetime.now(timezone.utc).isoformat()),
+        "day_post_surgery": data["day_post_surgery"],
+        "antibiotic_id": data.get("antibiotic_id"),
+        "antibiotic_dosage": data.get("antibiotic_dosage"),
+        "painkiller_id": data.get("painkiller_id"),
+        "painkiller_dosage": data.get("painkiller_dosage"),
+        "additional_medicine_id": data.get("additional_medicine_id"),
+        "additional_medicine_dosage": data.get("additional_medicine_dosage"),
+        "wound_condition": data["wound_condition"],
+        "remarks": data.get("remarks"),
+        "admin_id": current_user["id"]
+    }
+    
+    # Deduct medicine stock
+    medicines_to_deduct = [
+        (data.get("antibiotic_id"), data.get("antibiotic_dosage")),
+        (data.get("painkiller_id"), data.get("painkiller_dosage")),
+        (data.get("additional_medicine_id"), data.get("additional_medicine_dosage"))
+    ]
+    
+    for med_id, dosage in medicines_to_deduct:
+        if med_id and dosage:
+            await db.medicines.update_one(
+                {"id": med_id},
+                {"$inc": {"current_stock": -float(dosage)}}
+            )
+    
+    # Add treatment to case
+    await db.cases.update_one(
+        {"id": case_id},
+        {
+            "$push": {"daily_treatments": treatment},
+            "$set": {
+                "status": CaseStatus.UNDER_TREATMENT.value,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {"message": "Treatment record added successfully"}
+
+@api_router.post("/daily-feeding")
+async def create_daily_feeding(
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create daily feeding record"""
+    feeding = {
+        "id": str(uuid.uuid4()),
+        "date": data.get("date", datetime.now(timezone.utc).isoformat()),
+        "meal_time": data["meal_time"],
+        "kennel_numbers": data["kennel_numbers"],
+        "food_items": data["food_items"],
+        "total_quantity": data["total_quantity"],
+        "photo_base64": data["photo_base64"],
+        "animals_not_fed": data.get("animals_not_fed", []),
+        "remarks": data.get("remarks"),
+        "caretaker_id": current_user["id"]
+    }
+    
+    # Deduct food stock
+    for food_id, quantity in data["food_items"].items():
+        await db.food_items.update_one(
+            {"id": food_id},
+            {"$inc": {"current_stock": -float(quantity)}}
+        )
+    
+    await db.daily_feeding.insert_one(feeding)
+    
+    # Update cases with feeding reference
+    for kennel_num in data["kennel_numbers"]:
+        kennel = await db.kennels.find_one({"kennel_number": kennel_num}, {"_id": 0})
+        if kennel and kennel.get("current_case_id"):
+            await db.cases.update_one(
+                {"id": kennel["current_case_id"]},
+                {"$push": {"daily_feedings": feeding["id"]}}
+            )
+    
+    return {"message": "Feeding record created successfully", "feeding_id": feeding["id"]}
+
+@api_router.post("/cases/{case_id}/release")
+async def add_release_record(
+    case_id: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add release record"""
+    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    release = {
+        "date_time": data.get("date_time", datetime.now(timezone.utc).isoformat()),
+        "location_lat": data["location_lat"],
+        "location_lng": data["location_lng"],
+        "address": data["address"],
+        "photo_base64": data["photo_base64"],
+        "released_by": current_user["id"],
+        "remarks": data.get("remarks")
+    }
+    
+    await db.cases.update_one(
+        {"id": case_id},
+        {
+            "$set": {
+                "release": release,
+                "status": CaseStatus.RELEASED.value,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    # Free kennel
+    if case.get("initial_observation"):
+        kennel_number = case["initial_observation"]["kennel_number"]
+        await db.kennels.update_one(
+            {"kennel_number": kennel_number},
+            {
+                "$set": {
+                    "is_occupied": False,
+                    "current_case_id": None,
+                    "last_updated": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+    
+    return {"message": "Release record added successfully"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
