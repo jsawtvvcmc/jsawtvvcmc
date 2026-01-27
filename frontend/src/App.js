@@ -84,7 +84,7 @@ function AppRoutes() {
       <Route path="/catching" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="Catching Form" description="Capture animal location with GPS and photos" />
+            <CatchingForm />
           </DashboardLayout>
         </PrivateRoute>
       } />
@@ -92,39 +92,7 @@ function AppRoutes() {
       <Route path="/observations" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="Initial Observations" description="Record animal details and assign kennels" />
-          </DashboardLayout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/surgery" element={
-        <PrivateRoute>
-          <DashboardLayout>
-            <ComingSoon title="Surgery Form" description="Record surgery details and outcomes" />
-          </DashboardLayout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/treatment" element={
-        <PrivateRoute>
-          <DashboardLayout>
-            <ComingSoon title="Daily Treatment" description="Track daily animal treatment and medicine usage" />
-          </DashboardLayout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/feeding" element={
-        <PrivateRoute>
-          <DashboardLayout>
-            <ComingSoon title="Daily Feeding" description="Record feeding activities and food consumption" />
-          </DashboardLayout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/release" element={
-        <PrivateRoute>
-          <DashboardLayout>
-            <ComingSoon title="Release/Dispatch" description="Document animal release with GPS location" />
+            <InitialObservations />
           </DashboardLayout>
         </PrivateRoute>
       } />
@@ -132,7 +100,7 @@ function AppRoutes() {
       <Route path="/food-stock" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="Food Stock Management" description="Track food inventory and consumption" />
+            <FoodManagement />
           </DashboardLayout>
         </PrivateRoute>
       } />
