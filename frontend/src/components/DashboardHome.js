@@ -13,6 +13,7 @@ const DashboardHome = () => {
 
   useEffect(() => {
     fetchStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchStatistics = async () => {
