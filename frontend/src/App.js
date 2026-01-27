@@ -112,7 +112,7 @@ function AppRoutes() {
       <Route path="/surgery" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="Surgery Form" description="Record surgery details and outcomes" />
+            <SurgeryForm />
           </DashboardLayout>
         </PrivateRoute>
       } />
@@ -120,7 +120,7 @@ function AppRoutes() {
       <Route path="/treatment" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="Daily Treatment" description="Track daily treatment and medicine usage" />
+            <DailyTreatment />
           </DashboardLayout>
         </PrivateRoute>
       } />
@@ -128,7 +128,7 @@ function AppRoutes() {
       <Route path="/feeding" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="Daily Feeding" description="Record feeding activities and food consumption" />
+            <DailyFeeding />
           </DashboardLayout>
         </PrivateRoute>
       } />
@@ -136,7 +136,7 @@ function AppRoutes() {
       <Route path="/release" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="Release/Dispatch" description="Document animal release with GPS location" />
+            <ReleaseForm />
           </DashboardLayout>
         </PrivateRoute>
       } />
