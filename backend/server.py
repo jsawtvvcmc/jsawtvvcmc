@@ -203,6 +203,22 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
         current_user['created_at'] = datetime.fromisoformat(current_user['created_at'])
     return User(**current_user)
 
+@api_router.get("/config")
+async def get_system_config():
+    """Get system configuration"""
+    config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+    if not config:
+        return {
+            "id": "system_config",
+            "organization_name": "Janice's Trust",
+            "registered_office": "A hilltop haven for animals",
+            "project_name": "ABC Program",
+            "project_code": "JAPP",
+            "project_address": "",
+            "max_kennels": 300
+        }
+    return config
+
 # Basic route
 @api_router.get("/")
 async def root():
