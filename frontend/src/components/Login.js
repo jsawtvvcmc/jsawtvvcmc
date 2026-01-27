@@ -28,19 +28,19 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 p-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-purple-50 to-green-50 p-4">
+      <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            </div>
+            <img 
+              src="/janice-trust-logo.jpg" 
+              alt="Janice's Trust Logo" 
+              className="h-32 w-auto object-contain"
+            />
           </div>
-          <CardTitle className="text-2xl text-center">ABC Program</CardTitle>
-          <CardDescription className="text-center">
-            Animal Birth Control Management System
+          <CardTitle className="text-2xl text-center text-green-800">ABC Program Management</CardTitle>
+          <CardDescription className="text-center text-purple-600">
+            Animal Birth Control System
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -79,14 +79,14 @@ const Login = () => {
             
             <Button 
               type="submit" 
-              className="w-full bg-green-600 hover:bg-green-700"
+              className="w-full bg-green-700 hover:bg-green-800"
               disabled={loading}
               data-testid="login-submit-button"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
             
-            <div className="mt-4 p-3 bg-blue-50 rounded-md">
+            <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
               <p className="text-xs text-gray-600 text-center">
                 <strong>Default Login:</strong><br />
                 Email: manoj@janicestrust.org<br />
