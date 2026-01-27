@@ -6,6 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 import uuid
 import base64
+import logging
 
 from models import (
     User, UserCreate, Medicine, MedicineCreate, MedicineStockAdd, MedicineMiscUse,
@@ -14,10 +15,22 @@ from models import (
 )
 from utils import get_next_case_number, generate_password
 
-# Import these from server.py
-from server import db, get_current_user, require_roles, hash_password, logger
-
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# These will be set by server.py
+db = None
+get_current_user = None
+require_roles = None
+hash_password = None
+
+def init_routes(_db, _get_current_user, _require_roles, _hash_password):
+    """Initialize routes with dependencies from server"""
+    global db, get_current_user, require_roles, hash_password
+    db = _db
+    get_current_user = _get_current_user
+    require_roles = _require_roles
+    hash_password = _hash_password
 
 # ==================== USER MANAGEMENT ====================
 
