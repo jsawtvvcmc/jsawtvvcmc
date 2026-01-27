@@ -30,6 +30,7 @@ const DailyTreatment = () => {
     additional_medicine_id: '',
     additional_medicine_dosage: '',
     wound_condition: 'Normal Healing',
+    photo_base64: '',
     remarks: ''
   });
 
