@@ -105,6 +105,38 @@ function AppRoutes() {
         </PrivateRoute>
       } />
       
+      <Route path="/surgery" element={
+        <PrivateRoute>
+          <DashboardLayout>
+            <ComingSoon title="Surgery Form" description="Record surgery details and outcomes" />
+          </DashboardLayout>
+        </PrivateRoute>
+      } />
+      
+      <Route path="/treatment" element={
+        <PrivateRoute>
+          <DashboardLayout>
+            <ComingSoon title="Daily Treatment" description="Track daily treatment and medicine usage" />
+          </DashboardLayout>
+        </PrivateRoute>
+      } />
+      
+      <Route path="/feeding" element={
+        <PrivateRoute>
+          <DashboardLayout>
+            <ComingSoon title="Daily Feeding" description="Record feeding activities and food consumption" />
+          </DashboardLayout>
+        </PrivateRoute>
+      } />
+      
+      <Route path="/release" element={
+        <PrivateRoute>
+          <DashboardLayout>
+            <ComingSoon title="Release/Dispatch" description="Document animal release with GPS location" />
+          </DashboardLayout>
+        </PrivateRoute>
+      } />
+      
       <Route path="/users" element={
         <PrivateRoute>
           <DashboardLayout>
