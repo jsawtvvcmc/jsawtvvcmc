@@ -126,14 +126,6 @@ function AppRoutes() {
         </PrivateRoute>
       } />
       
-      <Route path="/medicines" element={
-        <PrivateRoute>
-          <DashboardLayout>
-            <ComingSoon title="Medicine Management" description="Manage medicine inventory and stock" />
-          </DashboardLayout>
-        </PrivateRoute>
-      } />
-      
       <Route path="/food-stock" element={
         <PrivateRoute>
           <DashboardLayout>
