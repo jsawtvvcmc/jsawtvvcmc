@@ -1,0 +1,230 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Alert, AlertDescription } from './ui/alert';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+const UserManagement = () => {
+  const { token } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    first_name: '',
+    last_name: '',
+    mobile: '',
+    role: ''
+  });
+
+  useEffect(() => {
+    fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${API}/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await axios.post(`${API}/users`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: `User created successfully!` });
+      setFormData({ email: '', first_name: '', last_name: '', mobile: '', role: '' });
+      setShowForm(false);
+      fetchUsers();
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to create user' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+          <p className="text-gray-600">Create and manage system users</p>
+        </div>
+        <Button 
+          onClick={() => setShowForm(!showForm)}
+          className="bg-green-600 hover:bg-green-700"
+          data-testid="add-user-button"
+        >
+          {showForm ? 'Cancel' : '+ Add User'}
+        </Button>
+      </div>
+
+      {message.text && (
+        <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
+          <AlertDescription>{message.text}</AlertDescription>
+        </Alert>
+      )}
+
+      {showForm && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Create New User</CardTitle>
+            <CardDescription>Enter user details. Password will be auto-generated.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="first_name">First Name *</Label>
+                  <Input
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                    required
+                    data-testid="first-name-input"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="last_name">Last Name *</Label>
+                  <Input
+                    id="last_name"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                    required
+                    data-testid="last-name-input"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  required
+                  data-testid="email-input"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="mobile">Mobile Number (10 digits) *</Label>
+                <Input
+                  id="mobile"
+                  value={formData.mobile}
+                  onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  required
+                  data-testid="mobile-input"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="role">Role *</Label>
+                <Select onValueChange={(value) => setFormData({...formData, role: value})} required>
+                  <SelectTrigger data-testid="role-select">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Super User">Super User</SelectItem>
+                    <SelectItem value="Admin">Admin</SelectItem>
+                    <SelectItem value="Driver">Driver</SelectItem>
+                    <SelectItem value="Catcher">Catcher</SelectItem>
+                    <SelectItem value="Veterinary Doctor">Veterinary Doctor</SelectItem>
+                    <SelectItem value="Caretaker">Caretaker</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Password will be auto-generated as: FirstName#Last4DigitsOfMobile
+                  <br />
+                  Example: {formData.first_name || 'John'}#{formData.mobile.slice(-4) || '1234'}
+                </p>
+              </div>
+
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700"
+                data-testid="create-user-submit"
+              >
+                {loading ? 'Creating...' : 'Create User'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>Existing Users ({users.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">Name</th>
+                  <th className="text-left p-2">Email</th>
+                  <th className="text-left p-2">Mobile</th>
+                  <th className="text-left p-2">Role</th>
+                  <th className="text-left p-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">{user.first_name} {user.last_name}</td>
+                    <td className="p-2">{user.email}</td>
+                    <td className="p-2">{user.mobile}</td>
+                    <td className="p-2">
+                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      {user.is_active ? (
+                        <span className="text-green-600">✓ Active</span>
+                      ) : (
+                        <span className="text-red-600">✗ Inactive</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default UserManagement;

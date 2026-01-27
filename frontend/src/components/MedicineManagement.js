@@ -1,0 +1,328 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Alert, AlertDescription } from './ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+const MedicineManagement = () => {
+  const { token } = useAuth();
+  const [medicines, setMedicines] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  
+  const [newMedicine, setNewMedicine] = useState({
+    name: '',
+    generic_name: '',
+    unit: 'Ml',
+    packing: 'Bottle',
+    packing_size: ''
+  });
+
+  const [stockAdd, setStockAdd] = useState({
+    medicine_id: '',
+    quantity: '',
+    batch_number: '',
+    expiry_date: ''
+  });
+
+  useEffect(() => {
+    fetchMedicines();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchMedicines = async () => {
+    try {
+      const response = await axios.get(`${API}/medicines`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMedicines(response.data);
+    } catch (error) {
+      console.error('Error fetching medicines:', error);
+    }
+  };
+
+  const handleCreateMedicine = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      await axios.post(`${API}/medicines`, {
+        ...newMedicine,
+        packing_size: parseFloat(newMedicine.packing_size)
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: 'Medicine created successfully!' });
+      setNewMedicine({ name: '', generic_name: '', unit: 'Ml', packing: 'Bottle', packing_size: '' });
+      fetchMedicines();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to create medicine' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddStock = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      await axios.post(`${API}/medicines/stock/add`, {
+        medicine_id: stockAdd.medicine_id,
+        quantity: parseFloat(stockAdd.quantity),
+        batch_number: stockAdd.batch_number || null,
+        expiry_date: stockAdd.expiry_date || null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: 'Stock added successfully!' });
+      setStockAdd({ medicine_id: '', quantity: '', batch_number: '', expiry_date: '' });
+      fetchMedicines();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to add stock' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Medicine Management</h1>
+        <p className="text-gray-600">Manage medicine inventory and stock</p>
+      </div>
+
+      {message.text && (
+        <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
+          <AlertDescription>{message.text}</AlertDescription>
+        </Alert>
+      )}
+
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList>
+          <TabsTrigger value="list">Medicine List</TabsTrigger>
+          <TabsTrigger value="add">Add New Medicine</TabsTrigger>
+          <TabsTrigger value="stock">Add Stock</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list">
+          <Card>
+            <CardHeader>
+              <CardTitle>Medicine Inventory ({medicines.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Name</th>
+                      <th className="text-left p-2">Generic Name</th>
+                      <th className="text-left p-2">Unit</th>
+                      <th className="text-left p-2">Packing</th>
+                      <th className="text-left p-2">Size</th>
+                      <th className="text-left p-2">Current Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {medicines.map((med) => (
+                      <tr key={med.id} className="border-b hover:bg-gray-50">
+                        <td className="p-2 font-medium">{med.name}</td>
+                        <td className="p-2">{med.generic_name || '-'}</td>
+                        <td className="p-2">{med.unit}</td>
+                        <td className="p-2">{med.packing}</td>
+                        <td className="p-2">{med.packing_size}</td>
+                        <td className="p-2">
+                          <span className={`font-bold ${med.current_stock < 10 ? 'text-red-600' : 'text-green-600'}`}>
+                            {med.current_stock}
+                            {med.current_stock < 10 && ' ⚠️'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="add">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New Medicine</CardTitle>
+              <CardDescription>Create a new medicine entry</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateMedicine} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Medicine Name *</Label>
+                  <Input
+                    id="name"
+                    value={newMedicine.name}
+                    onChange={(e) => setNewMedicine({...newMedicine, name: e.target.value})}
+                    required
+                    data-testid="medicine-name-input"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="generic_name">Generic Name</Label>
+                  <Input
+                    id="generic_name"
+                    value={newMedicine.generic_name}
+                    onChange={(e) => setNewMedicine({...newMedicine, generic_name: e.target.value})}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Unit *</Label>
+                    <Select 
+                      value={newMedicine.unit}
+                      onValueChange={(value) => setNewMedicine({...newMedicine, unit: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Ml">Ml</SelectItem>
+                        <SelectItem value="Mg">Mg</SelectItem>
+                        <SelectItem value="Pcs">Pcs</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Packing *</Label>
+                    <Select 
+                      value={newMedicine.packing}
+                      onValueChange={(value) => setNewMedicine({...newMedicine, packing: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Bottle">Bottle</SelectItem>
+                        <SelectItem value="Vial">Vial</SelectItem>
+                        <SelectItem value="Pack">Pack</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="packing_size">Packing Size *</Label>
+                    <Input
+                      id="packing_size"
+                      type="number"
+                      step="0.01"
+                      value={newMedicine.packing_size}
+                      onChange={(e) => setNewMedicine({...newMedicine, packing_size: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  data-testid="create-medicine-button"
+                >
+                  {loading ? 'Creating...' : 'Create Medicine'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="stock">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Stock</CardTitle>
+              <CardDescription>Add stock to existing medicine</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAddStock} className="space-y-4">
+                <div>
+                  <Label>Select Medicine *</Label>
+                  <Select 
+                    value={stockAdd.medicine_id}
+                    onValueChange={(value) => setStockAdd({...stockAdd, medicine_id: value})}
+                  >
+                    <SelectTrigger data-testid="medicine-select">
+                      <SelectValue placeholder="Select medicine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {medicines.map((med) => (
+                        <SelectItem key={med.id} value={med.id}>
+                          {med.name} (Current: {med.current_stock})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="quantity">Quantity (in packages) *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    step="0.01"
+                    value={stockAdd.quantity}
+                    onChange={(e) => setStockAdd({...stockAdd, quantity: e.target.value})}
+                    required
+                    data-testid="quantity-input"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="batch_number">Batch Number</Label>
+                    <Input
+                      id="batch_number"
+                      value={stockAdd.batch_number}
+                      onChange={(e) => setStockAdd({...stockAdd, batch_number: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="expiry_date">Expiry Date</Label>
+                    <Input
+                      id="expiry_date"
+                      type="date"
+                      value={stockAdd.expiry_date}
+                      onChange={(e) => setStockAdd({...stockAdd, expiry_date: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  data-testid="add-stock-button"
+                >
+                  {loading ? 'Adding...' : 'Add Stock'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default MedicineManagement;
