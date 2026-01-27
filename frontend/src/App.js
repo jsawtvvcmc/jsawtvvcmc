@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import Navigation from './components/Navigation';
 import DashboardHome from './components/DashboardHome';
+import UserManagement from './components/UserManagement';
+import MedicineManagement from './components/MedicineManagement';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
