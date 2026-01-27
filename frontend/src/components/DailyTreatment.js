@@ -105,6 +105,7 @@ const DailyTreatment = () => {
         additional_medicine_id: formData.additional_medicine_id || null,
         additional_medicine_dosage: formData.additional_medicine_dosage ? parseFloat(formData.additional_medicine_dosage) : null,
         wound_condition: formData.wound_condition,
+        photo_base64: formData.photo_base64,
         remarks: formData.remarks || null
       }, {
         headers: { Authorization: `Bearer ${token}` }
