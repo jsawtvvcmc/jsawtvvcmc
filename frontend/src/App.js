@@ -9,6 +9,10 @@ import MedicineManagement from './components/MedicineManagement';
 import FoodManagement from './components/FoodManagement';
 import CatchingForm from './components/CatchingForm';
 import InitialObservations from './components/InitialObservations';
+import SurgeryForm from './components/SurgeryForm';
+import DailyTreatment from './components/DailyTreatment';
+import DailyFeeding from './components/DailyFeeding';
+import ReleaseForm from './components/ReleaseForm';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
