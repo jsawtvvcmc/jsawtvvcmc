@@ -311,6 +311,29 @@ const DailyTreatment = () => {
               </Select>
             </div>
 
+            {/* Photo */}
+            <div>
+              <Label htmlFor="photo">Photo of Wound/Animal *</Label>
+              <Input
+                id="photo"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoCapture}
+                required
+                data-testid="photo-input"
+              />
+              {formData.photo_base64 && (
+                <div className="mt-2">
+                  <img 
+                    src={formData.photo_base64} 
+                    alt="Treatment" 
+                    className="max-w-xs rounded-lg border-2 border-green-500"
+                  />
+                </div>
+              )}
+            </div>
+
             {/* Remarks */}
             <div>
               <Label htmlFor="remarks">Remarks</Label>
