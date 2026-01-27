@@ -145,7 +145,15 @@ function AppRoutes() {
       <Route path="/users" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="User Management" description="Create and manage system users" />
+            <UserManagement />
+          </DashboardLayout>
+        </PrivateRoute>
+      } />
+      
+      <Route path="/medicines" element={
+        <PrivateRoute>
+          <DashboardLayout>
+            <MedicineManagement />
           </DashboardLayout>
         </PrivateRoute>
       } />
