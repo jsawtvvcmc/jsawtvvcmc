@@ -6,6 +6,9 @@ import Navigation from './components/Navigation';
 import DashboardHome from './components/DashboardHome';
 import UserManagement from './components/UserManagement';
 import MedicineManagement from './components/MedicineManagement';
+import FoodManagement from './components/FoodManagement';
+import CatchingForm from './components/CatchingForm';
+import InitialObservations from './components/InitialObservations';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
