@@ -4,8 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Alert, AlertDescription } from './ui/alert';
 import axios from 'axios';
@@ -16,29 +14,41 @@ const API = `${BACKEND_URL}/api`;
 const SurgeryForm = () => {
   const { token } = useAuth();
   const [cases, setCases] = useState([]);
-  const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedCase, setSelectedCase] = useState(null);
+  const [photos, setPhotos] = useState([]);
   
   const [formData, setFormData] = useState({
     case_id: '',
-    pre_surgery_status: 'Fit for Surgery',
+    weight: '',
+    skin: 'Normal',
+    cancelled: 'No',
     cancellation_reason: '',
-    surgery_type: '',
-    anesthesia_used: [],
-    surgery_start_time: '',
-    surgery_end_time: '',
-    complications: false,
-    complication_description: '',
-    post_surgery_status: 'Good',
-    veterinary_signature: '',
-    remarks: ''
+    // Medicine dosages (auto-calculated)
+    arv: 1,
+    xylazine: 0,
+    melonex: 0,
+    atropine: 0,
+    diazepam: 0,
+    prednisolone: 0,
+    ketamine: 0,
+    tribivet: 1,
+    intacef_tazo: 0,
+    adrenaline: 0,
+    alu_spray: 0,
+    ethamsylate: 0,
+    tincture: 0,
+    avil: 1,
+    vicryl_1: 0.20,
+    catgut: 0.20,
+    vicryl_2: 0,
+    metrinedasol: 50,
+    ketamine_diazepam: 0
   });
 
   useEffect(() => {
     fetchInKennelCases();
-    fetchMedicines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -53,39 +63,71 @@ const SurgeryForm = () => {
     }
   };
 
-  const fetchMedicines = async () => {
-    try {
-      const response = await axios.get(`${API}/medicines`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMedicines(response.data);
-    } catch (error) {
-      console.error('Error fetching medicines:', error);
-    }
-  };
-
   const handleCaseSelect = (caseId) => {
     const caseData = cases.find(c => c.id === caseId);
     setSelectedCase(caseData);
     setFormData({
       ...formData,
-      case_id: caseId,
-      surgery_type: caseData?.initial_observation?.gender === 'Male' ? 'Castration' : 'Ovariohysterectomy'
+      case_id: caseId
     });
   };
 
-  const handleAnesthesiaToggle = (medicineId) => {
-    if (formData.anesthesia_used.includes(medicineId)) {
-      setFormData({
-        ...formData,
-        anesthesia_used: formData.anesthesia_used.filter(id => id !== medicineId)
-      });
-    } else {
-      setFormData({
-        ...formData,
-        anesthesia_used: [...formData.anesthesia_used, medicineId]
-      });
+  const calculateMedicines = (weight) => {
+    const w = parseFloat(weight);
+    if (!w || w < 10 || w > 30) return;
+
+    const roundToHalf = (val) => Math.round(val * 2) / 2;
+    const roundTo50 = (val) => Math.round(val / 50) * 50;
+    const roundTo5 = (val) => Math.round(val / 5) * 5;
+
+    const isFemal = selectedCase?.initial_observation?.gender === 'Female';
+
+    setFormData(prev => ({
+      ...prev,
+      arv: 1,
+      xylazine: w / 10,
+      melonex: Math.min(0.8 * w / 10, 1),
+      atropine: roundToHalf(w / 10),
+      ketamine: roundToHalf(3 * w / 10),
+      tribivet: 1,
+      intacef_tazo: roundTo50(400 * w / 10),
+      alu_spray: roundToHalf(2 * w / 10),
+      ethamsylate: roundToHalf(w / 10),
+      tincture: roundTo5(20 * w / 10),
+      avil: 1,
+      vicryl_1: 0.20,
+      catgut: 0.20,
+      vicryl_2: isFemal ? 0.20 : 0,
+      metrinedasol: 50
+    }));
+  };
+
+  const handleWeightChange = (e) => {
+    const weight = e.target.value;
+    setFormData({ ...formData, weight });
+    if (weight && weight >= 10 && weight <= 30) {
+      calculateMedicines(weight);
     }
+  };
+
+  const handlePhotoCapture = (e) => {
+    const files = Array.from(e.target.files);
+    if (photos.length + files.length > 4) {
+      setMessage({ type: 'error', text: 'Maximum 4 photos allowed' });
+      return;
+    }
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotos(prev => [...prev, reader.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -94,54 +136,76 @@ const SurgeryForm = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      await axios.post(`${API}/cases/${formData.case_id}/surgery`, {
-        pre_surgery_status: formData.pre_surgery_status,
-        cancellation_reason: formData.pre_surgery_status === 'Cancel Surgery' ? formData.cancellation_reason : null,
-        surgery_type: formData.pre_surgery_status === 'Fit for Surgery' ? formData.surgery_type : null,
-        anesthesia_used: formData.pre_surgery_status === 'Fit for Surgery' ? formData.anesthesia_used : [],
-        surgery_start_time: formData.pre_surgery_status === 'Fit for Surgery' ? formData.surgery_start_time : null,
-        surgery_end_time: formData.pre_surgery_status === 'Fit for Surgery' ? formData.surgery_end_time : null,
-        complications: formData.complications,
-        complication_description: formData.complication_description || null,
-        post_surgery_status: formData.pre_surgery_status === 'Fit for Surgery' ? formData.post_surgery_status : null,
-        veterinary_signature: formData.veterinary_signature,
-        remarks: formData.remarks || null
-      }, {
+      const surgeryData = {
+        case_id: formData.case_id,
+        weight: parseFloat(formData.weight),
+        skin: formData.skin,
+        photos: photos,
+        cancelled: formData.cancelled,
+        cancellation_reason: formData.cancelled === 'Yes' ? formData.cancellation_reason : null,
+        medicines: formData.cancelled === 'No' ? {
+          arv: formData.arv,
+          xylazine: formData.xylazine,
+          melonex: formData.melonex,
+          atropine: formData.atropine,
+          diazepam: formData.diazepam,
+          prednisolone: formData.prednisolone,
+          ketamine: formData.ketamine,
+          tribivet: formData.tribivet,
+          intacef_tazo: formData.intacef_tazo,
+          adrenaline: formData.adrenaline,
+          alu_spray: formData.alu_spray,
+          ethamsylate: formData.ethamsylate,
+          tincture: formData.tincture,
+          avil: formData.avil,
+          vicryl_1: formData.vicryl_1,
+          catgut: formData.catgut,
+          vicryl_2: formData.vicryl_2,
+          metrinedasol: formData.metrinedasol,
+          ketamine_diazepam: formData.ketamine_diazepam
+        } : {}
+      };
+
+      await axios.post(`${API}/cases/${formData.case_id}/surgery`, surgeryData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setMessage({ type: 'success', text: 'Surgery record added successfully!' });
+      setMessage({ type: 'success', text: 'Surgery record saved successfully!' });
+      // Reset form
       setFormData({
-        case_id: '',
-        pre_surgery_status: 'Fit for Surgery',
-        cancellation_reason: '',
-        surgery_type: '',
-        anesthesia_used: [],
-        surgery_start_time: '',
-        surgery_end_time: '',
-        complications: false,
-        complication_description: '',
-        post_surgery_status: 'Good',
-        veterinary_signature: '',
-        remarks: ''
+        case_id: '', weight: '', skin: 'Normal', cancelled: 'No', cancellation_reason: '',
+        arv: 1, xylazine: 0, melonex: 0, atropine: 0, diazepam: 0, prednisolone: 0,
+        ketamine: 0, tribivet: 1, intacef_tazo: 0, adrenaline: 0, alu_spray: 0,
+        ethamsylate: 0, tincture: 0, avil: 1, vicryl_1: 0.20, catgut: 0.20,
+        vicryl_2: 0, metrinedasol: 50, ketamine_diazepam: 0
       });
+      setPhotos([]);
       setSelectedCase(null);
       fetchInKennelCases();
     } catch (error) {
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.detail || 'Failed to add surgery record' 
-      });
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to save' });
     } finally {
       setLoading(false);
     }
   };
 
+  const getMaleCancellationReasons = () => [
+    'Too weak', 'Under age', 'Looks ill', 'Shows symptoms of highly contagious disease'
+  ];
+
+  const getFemaleCancellationReasons = () => [
+    'Too weak', 'Under age', 'Looks ill', 'Shows symptoms of highly contagious disease',
+    'Advanced pregnant', 'Lactating'
+  ];
+
+  const gender = selectedCase?.initial_observation?.gender;
+  const cancellationReasons = gender === 'Female' ? getFemaleCancellationReasons() : getMaleCancellationReasons();
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Surgery Form ⚕️</h1>
-        <p className="text-gray-600">Record surgery details and outcomes</p>
+        <p className="text-gray-600">Record surgery details with auto-calculated medicine dosages</p>
       </div>
 
       {message.text && (
@@ -153,203 +217,163 @@ const SurgeryForm = () => {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Surgery Record</CardTitle>
-          <CardDescription>Select a case and record surgery details</CardDescription>
+          <CardDescription>All medicine dosages auto-calculated based on weight</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Case Selection */}
             <div className="p-4 bg-green-50 rounded-lg">
               <Label>Select Case *</Label>
-              <Select 
+              <select 
                 value={formData.case_id}
-                onValueChange={handleCaseSelect}
+                onChange={(e) => handleCaseSelect(e.target.value)}
+                className="w-full p-2 border rounded"
                 required
               >
-                <SelectTrigger data-testid="case-select">
-                  <SelectValue placeholder="Select a case in kennel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cases.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.case_number} - Kennel {c.initial_observation?.kennel_number} - {c.initial_observation?.gender}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">Select a case</option>
+                {cases.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    Case: {c.case_number} - Kennel: {c.initial_observation?.kennel_number} - {c.initial_observation?.gender}
+                  </option>
+                ))}
+              </select>
               {selectedCase && (
                 <div className="mt-2 p-2 bg-white rounded text-sm">
+                  <p><strong>Case No:</strong> {selectedCase.case_number}</p>
+                  <p><strong>Kennel No:</strong> {selectedCase.initial_observation?.kennel_number}</p>
                   <p><strong>Gender:</strong> {selectedCase.initial_observation?.gender}</p>
-                  <p><strong>Age:</strong> {selectedCase.initial_observation?.approximate_age}</p>
-                  <p><strong>Body Condition:</strong> {selectedCase.initial_observation?.body_condition}</p>
                 </div>
               )}
             </div>
 
-            {/* Pre-Surgery Status */}
+            {/* Weight */}
             <div>
-              <Label>Pre-Surgery Status *</Label>
-              <RadioGroup 
-                value={formData.pre_surgery_status} 
-                onValueChange={(value) => setFormData({...formData, pre_surgery_status: value})}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Fit for Surgery" id="fit" />
-                  <Label htmlFor="fit">Fit for Surgery</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Cancel Surgery" id="cancel" />
-                  <Label htmlFor="cancel">Cancel Surgery</Label>
+              <Label htmlFor="weight">Weight (kg) * (10-30 kg)</Label>
+              <Input
+                id="weight"
+                type="number"
+                min="10"
+                max="30"
+                step="0.1"
+                value={formData.weight}
+                onChange={handleWeightChange}
+                required
+                placeholder="Enter weight in kg"
+              />
+            </div>
+
+            {/* Skin Condition */}
+            <div>
+              <Label>Skin Condition *</Label>
+              <RadioGroup value={formData.skin} onValueChange={(value) => setFormData({...formData, skin: value})}>
+                <div className="flex space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Normal" id="normal" />
+                    <Label htmlFor="normal">Normal</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Rough" id="rough" />
+                    <Label htmlFor="rough">Rough</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Visible Infection" id="infection" />
+                    <Label htmlFor="infection">Visible Infection</Label>
+                  </div>
                 </div>
               </RadioGroup>
             </div>
 
-            {/* Cancellation Reason */}
-            {formData.pre_surgery_status === 'Cancel Surgery' && (
-              <div className="p-4 bg-red-50 rounded-lg">
-                <Label>Cancellation Reason *</Label>
-                <Select 
-                  value={formData.cancellation_reason}
-                  onValueChange={(value) => setFormData({...formData, cancellation_reason: value})}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select reason" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Too weak">Too weak</SelectItem>
-                    <SelectItem value="Already sterilized">Already sterilized</SelectItem>
-                    <SelectItem value="Advanced pregnant">Advanced pregnant</SelectItem>
-                    <SelectItem value="Lactating">Lactating</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Photos */}
+            <div>
+              <Label>Photos (Up to 4) *</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                multiple
+                capture="environment"
+                onChange={handlePhotoCapture}
+              />
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {photos.map((photo, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-24 object-cover rounded" />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(idx)}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600 mt-1">{photos.length}/4 photos uploaded</p>
+            </div>
+
+            {/* Cancelled */}
+            <div className="p-4 border-2 rounded-lg">
+              <Label>Surgery Cancelled? *</Label>
+              <RadioGroup value={formData.cancelled} onValueChange={(value) => setFormData({...formData, cancelled: value})}>
+                <div className="flex space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="No" id="not-cancelled" />
+                    <Label htmlFor="not-cancelled">No</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Yes" id="cancelled" />
+                    <Label htmlFor="cancelled">Yes</Label>
+                  </div>
+                </div>
+              </RadioGroup>
+
+              {formData.cancelled === 'Yes' && (
+                <div className="mt-4 p-4 bg-red-50 rounded">
+                  <Label>Cancellation Reason *</Label>
+                  <select
+                    value={formData.cancellation_reason}
+                    onChange={(e) => setFormData({...formData, cancellation_reason: e.target.value})}
+                    className="w-full p-2 border rounded mt-2"
+                    required
+                  >
+                    <option value="">Select reason</option>
+                    {cancellationReasons.map(reason => (
+                      <option key={reason} value={reason}>{reason}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Medicine Dosages */}
+            {formData.cancelled === 'No' && formData.weight && (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-bold text-lg mb-4">Auto-Calculated Medicine Dosages</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div><Label>ARV:</Label><Input type="number" step="0.01" value={formData.arv} onChange={(e) => setFormData({...formData, arv: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Xylazine:</Label><Input type="number" step="0.01" value={formData.xylazine} onChange={(e) => setFormData({...formData, xylazine: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Melonex:</Label><Input type="number" step="0.01" value={formData.melonex} onChange={(e) => setFormData({...formData, melonex: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Atropine:</Label><Input type="number" step="0.01" value={formData.atropine} onChange={(e) => setFormData({...formData, atropine: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Diazepam:</Label><Input type="number" step="0.01" value={formData.diazepam} onChange={(e) => setFormData({...formData, diazepam: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Prednisolone:</Label><Input type="number" step="0.01" value={formData.prednisolone} onChange={(e) => setFormData({...formData, prednisolone: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Ketamine:</Label><Input type="number" step="0.01" value={formData.ketamine} onChange={(e) => setFormData({...formData, ketamine: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Tribivet:</Label><Input type="number" step="0.01" value={formData.tribivet} onChange={(e) => setFormData({...formData, tribivet: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Intacef tazo (mg):</Label><Input type="number" step="1" value={formData.intacef_tazo} onChange={(e) => setFormData({...formData, intacef_tazo: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Adrenaline:</Label><Input type="number" step="0.01" value={formData.adrenaline} onChange={(e) => setFormData({...formData, adrenaline: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Alu spray:</Label><Input type="number" step="0.01" value={formData.alu_spray} onChange={(e) => setFormData({...formData, alu_spray: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Ethamsylate:</Label><Input type="number" step="0.01" value={formData.ethamsylate} onChange={(e) => setFormData({...formData, ethamsylate: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Tincture:</Label><Input type="number" step="1" value={formData.tincture} onChange={(e) => setFormData({...formData, tincture: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Avil:</Label><Input type="number" step="0.01" value={formData.avil} onChange={(e) => setFormData({...formData, avil: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Vicryl 1 (pc):</Label><Input type="number" step="0.01" value={formData.vicryl_1} onChange={(e) => setFormData({...formData, vicryl_1: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Catgut (pc):</Label><Input type="number" step="0.01" value={formData.catgut} onChange={(e) => setFormData({...formData, catgut: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Vicryl 2 (pc):</Label><Input type="number" step="0.01" value={formData.vicryl_2} onChange={(e) => setFormData({...formData, vicryl_2: parseFloat(e.target.value)})} disabled={gender !== 'Female'} /></div>
+                  <div><Label>Metrinedasol:</Label><Input type="number" step="1" value={formData.metrinedasol} onChange={(e) => setFormData({...formData, metrinedasol: parseFloat(e.target.value)})} /></div>
+                  <div><Label>Ketamine-Diazepam:</Label><Input type="number" step="0.01" value={formData.ketamine_diazepam} onChange={(e) => setFormData({...formData, ketamine_diazepam: parseFloat(e.target.value)})} placeholder="Manual entry" /></div>
+                </div>
               </div>
             )}
 
-            {/* Surgery Details (if Fit) */}
-            {formData.pre_surgery_status === 'Fit for Surgery' && (
-              <>
-                <div>
-                  <Label>Surgery Type *</Label>
-                  <Input
-                    value={formData.surgery_type}
-                    disabled
-                    className="bg-gray-100"
-                  />
-                  <p className="text-xs text-gray-600 mt-1">Auto-selected based on gender</p>
-                </div>
-
-                <div>
-                  <Label>Anesthesia Used</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {medicines.map((med) => (
-                      <div key={med.id} className="flex items-center space-x-2 p-2 border rounded">
-                        <input
-                          type="checkbox"
-                          id={med.id}
-                          checked={formData.anesthesia_used.includes(med.id)}
-                          onChange={() => handleAnesthesiaToggle(med.id)}
-                          className="w-4 h-4"
-                        />
-                        <label htmlFor={med.id} className="text-sm">{med.name}</label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="start_time">Surgery Start Time *</Label>
-                    <Input
-                      id="start_time"
-                      type="time"
-                      value={formData.surgery_start_time}
-                      onChange={(e) => setFormData({...formData, surgery_start_time: e.target.value})}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="end_time">Surgery End Time *</Label>
-                    <Input
-                      id="end_time"
-                      type="time"
-                      value={formData.surgery_end_time}
-                      onChange={(e) => setFormData({...formData, surgery_end_time: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="p-4 bg-yellow-50 rounded-lg space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="complications"
-                      checked={formData.complications}
-                      onChange={(e) => setFormData({...formData, complications: e.target.checked})}
-                      className="w-4 h-4"
-                    />
-                    <Label htmlFor="complications">Complications Occurred</Label>
-                  </div>
-                  {formData.complications && (
-                    <Textarea
-                      placeholder="Describe complications..."
-                      value={formData.complication_description}
-                      onChange={(e) => setFormData({...formData, complication_description: e.target.value})}
-                      rows={3}
-                    />
-                  )}
-                </div>
-
-                <div>
-                  <Label>Post-Surgery Status *</Label>
-                  <Select 
-                    value={formData.post_surgery_status}
-                    onValueChange={(value) => setFormData({...formData, post_surgery_status: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Excellent">Excellent</SelectItem>
-                      <SelectItem value="Good">Good</SelectItem>
-                      <SelectItem value="Fair">Fair</SelectItem>
-                      <SelectItem value="Poor">Poor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-
-            {/* Common Fields */}
-            <div>
-              <Label htmlFor="signature">Veterinary Signature *</Label>
-              <Input
-                id="signature"
-                value={formData.veterinary_signature}
-                onChange={(e) => setFormData({...formData, veterinary_signature: e.target.value})}
-                placeholder="Enter your name"
-                required
-                data-testid="signature-input"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="remarks">Remarks</Label>
-              <Textarea
-                id="remarks"
-                value={formData.remarks}
-                onChange={(e) => setFormData({...formData, remarks: e.target.value})}
-                rows={2}
-              />
-            </div>
-
             <Button 
               type="submit" 
-              disabled={loading || cases.length === 0}
+              disabled={loading || cases.length === 0 || photos.length === 0}
               className="w-full bg-green-600 hover:bg-green-700 text-lg py-6"
-              data-testid="submit-surgery"
             >
               {loading ? 'Saving...' : '✓ Save Surgery Record'}
             </Button>
