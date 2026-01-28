@@ -264,6 +264,49 @@ async def get_system_config():
 async def root():
     return {"message": "ABC Program Management System API", "version": "1.0"}
 
+# ==================== GOOGLE DRIVE ====================
+from google_drive_service import get_drive_service
+
+@api_router.get("/drive/test")
+async def test_google_drive_connection(current_user: dict = Depends(get_current_user)):
+    """Test Google Drive connection"""
+    drive_service = get_drive_service()
+    result = drive_service.test_connection()
+    return result
+
+@api_router.post("/drive/upload-test")
+async def test_drive_upload(current_user: dict = Depends(get_current_user)):
+    """Test upload a small image to Google Drive"""
+    drive_service = get_drive_service()
+    
+    if not drive_service.is_connected():
+        raise HTTPException(status_code=503, detail="Google Drive not connected")
+    
+    # Create a simple 1x1 red pixel PNG for testing
+    test_image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
+    
+    result = drive_service.upload_image(
+        base64_data=test_image_base64,
+        filename=f"test_upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+        case_number="TEST"
+    )
+    
+    if result:
+        return {"success": True, "file": result}
+    else:
+        raise HTTPException(status_code=500, detail="Upload failed")
+
+@api_router.get("/drive/files")
+async def list_drive_files(current_user: dict = Depends(get_current_user)):
+    """List files in Google Drive folder"""
+    drive_service = get_drive_service()
+    
+    if not drive_service.is_connected():
+        raise HTTPException(status_code=503, detail="Google Drive not connected")
+    
+    files = drive_service.list_files()
+    return {"files": files, "count": len(files)}
+
 # ==================== USER MANAGEMENT ====================
 
 @api_router.post("/users", response_model=User)
