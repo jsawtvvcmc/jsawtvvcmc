@@ -174,6 +174,45 @@ async def create_default_superuser():
         }
         await db.system_config.insert_one(default_config)
         logger.info("Default system configuration created")
+    
+    # Create default medicines for surgery
+    existing_medicines_count = await db.medicines.count_documents({})
+    if existing_medicines_count == 0:
+        default_medicines = [
+            {"name": "Anti-Rabies Vaccine", "unit": "Ml", "packing": "Vial", "packing_size": 10},
+            {"name": "Xylazine", "unit": "Ml", "packing": "Vial", "packing_size": 30},
+            {"name": "Melonex", "unit": "Ml", "packing": "Bottle", "packing_size": 100},
+            {"name": "Atropine", "unit": "Ml", "packing": "Vial", "packing_size": 30},
+            {"name": "Diazepam", "unit": "Ml", "packing": "Vial", "packing_size": 10},
+            {"name": "Prednisolone", "unit": "Ml", "packing": "Vial", "packing_size": 10},
+            {"name": "Ketamine", "unit": "Ml", "packing": "Vial", "packing_size": 5},
+            {"name": "Tribivet", "unit": "Ml", "packing": "Bottle", "packing_size": 100},
+            {"name": "Intacef Tazo", "unit": "Mg", "packing": "Vial", "packing_size": 4500},
+            {"name": "Adrenaline", "unit": "Ml", "packing": "Vial", "packing_size": 10},
+            {"name": "Alu Spray", "unit": "Ml", "packing": "Bottle", "packing_size": 100},
+            {"name": "Ethamsylate", "unit": "Ml", "packing": "Vial", "packing_size": 30},
+            {"name": "Tincture", "unit": "Ml", "packing": "Bottle", "packing_size": 400},
+            {"name": "Avil", "unit": "Ml", "packing": "Bottle", "packing_size": 100},
+            {"name": "Vicryl 1", "unit": "Pcs", "packing": "Pack", "packing_size": 12},
+            {"name": "Catgut", "unit": "Pcs", "packing": "Pack", "packing_size": 12},
+            {"name": "Vicryl 2", "unit": "Pcs", "packing": "Pack", "packing_size": 12},
+            {"name": "Metronidazole", "unit": "Ml", "packing": "Bottle", "packing_size": 100},
+        ]
+        
+        for med in default_medicines:
+            medicine_doc = {
+                "id": str(uuid.uuid4()),
+                "name": med["name"],
+                "generic_name": None,
+                "unit": med["unit"],
+                "packing": med["packing"],
+                "packing_size": med["packing_size"],
+                "current_stock": 0.0,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.medicines.insert_one(medicine_doc)
+        
+        logger.info(f"Created {len(default_medicines)} default medicines for surgery")
 
 # Authentication Routes
 @api_router.post("/auth/login", response_model=LoginResponse)
