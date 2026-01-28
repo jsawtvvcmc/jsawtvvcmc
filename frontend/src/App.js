@@ -176,6 +176,14 @@ function AppRoutes() {
         </PrivateRoute>
       } />
       
+      <Route path="/bulk-upload" element={
+        <PrivateRoute>
+          <DashboardLayout>
+            <BulkUpload />
+          </DashboardLayout>
+        </PrivateRoute>
+      } />
+      
       <Route path="/" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
