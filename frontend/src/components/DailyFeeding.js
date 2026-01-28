@@ -77,17 +77,18 @@ const DailyFeeding = () => {
     const totalQuantity = Object.values(selectedFood).reduce((sum, qty) => sum + parseFloat(qty || 0), 0);
 
     try {
-      await axios.post(`${API}/daily-feeding`, {
+      const response = await axios.post(`${API}/daily-feeding`, {
         meal_time: mealTime,
         kennel_numbers: selectedKennels,
         food_items: selectedFood,
         total_quantity: totalQuantity,
-        photo_base64: photo
+        photos: photos.filter(p => p)
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setMessage({ type: 'success', text: 'Feeding record created successfully!' });
+      const photosUploaded = response.data.photos_uploaded || 0;
+      setMessage({ type: 'success', text: `Feeding record created successfully! ${photosUploaded} photo(s) uploaded to Drive.` });
       setSelectedKennels([]);
       setSelectedFood({});
       setPhoto('');
