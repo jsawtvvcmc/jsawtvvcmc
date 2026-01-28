@@ -577,6 +577,7 @@ async def initialize_kennels(current_user: dict = Depends(get_current_user)):
     return {"message": f"Initialized {len(kennels)} kennels"}
 
 # ==================== CASE MANAGEMENT ====================
+from drive_uploader import get_drive_uploader
 
 @api_router.post("/cases/catching")
 async def create_catching_record(
@@ -590,6 +591,37 @@ async def create_catching_record(
     project_code = config.get("project_code", "JAPP") if config else "JAPP"
     case_number = await get_next_case_number(db, project_code)
     
+    # Upload photos to Google Drive
+    photo_links = []
+    drive_uploader = await get_drive_uploader(db)
+    
+    if drive_uploader:
+        photos = data.get("photos", [])
+        if not photos and data.get("photo_base64"):
+            photos = [data["photo_base64"]]
+        
+        catching_date = datetime.fromisoformat(data.get("date_time", datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')) if data.get("date_time") else datetime.now(timezone.utc)
+        
+        for i, photo in enumerate(photos[:4]):
+            if photo:
+                result = drive_uploader.upload_image(
+                    base64_data=photo,
+                    form_type="Catching",
+                    case_number=case_number,
+                    date=catching_date,
+                    photo_index=i
+                )
+                if result:
+                    photo_links.append(result)
+        
+        # Update credentials if refreshed
+        updated_creds = drive_uploader.get_updated_credentials()
+        if updated_creds.get("access_token") != drive_uploader.creds_data.get("access_token"):
+            await db.drive_credentials.update_one(
+                {"user_id": updated_creds.get("user_id", "system")},
+                {"$set": updated_creds}
+            )
+    
     case_dict = {
         "id": str(uuid.uuid4()),
         "case_number": case_number,
@@ -601,7 +633,8 @@ async def create_catching_record(
             "location_lng": data["location_lng"],
             "address": data["address"],
             "ward_number": data.get("ward_number"),
-            "photo_base64": data["photo_base64"],
+            "photo_links": photo_links,  # Store Google Drive links instead of base64
+            "photo_base64": data.get("photo_base64") if not photo_links else None,  # Fallback if Drive fails
             "remarks": data.get("remarks"),
             "driver_id": current_user["id"]
         },
@@ -610,9 +643,9 @@ async def create_catching_record(
     }
     
     await db.cases.insert_one(case_dict)
-    logger.info(f"Case created: {case_number}")
+    logger.info(f"Case created: {case_number} with {len(photo_links)} photos uploaded to Drive")
     
-    return {"case_number": case_number, "case_id": case_dict["id"], "message": "Case created successfully"}
+    return {"case_number": case_number, "case_id": case_dict["id"], "message": "Case created successfully", "photos_uploaded": len(photo_links)}
 
 @api_router.get("/cases")
 async def get_cases(
