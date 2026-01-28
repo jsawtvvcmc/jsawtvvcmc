@@ -195,7 +195,9 @@ class TestBulkUploadCatching:
     
     def test_bulk_upload_catching_success(self, auth_headers):
         """Test successful bulk upload of catching records"""
-        case_numbers = ["TEST-PYTEST-C001", "TEST-PYTEST-C002"]
+        import time
+        timestamp = int(time.time())
+        case_numbers = [f"TEST-PYTEST-C{timestamp}-001", f"TEST-PYTEST-C{timestamp}-002"]
         excel_file = self.create_catching_excel(case_numbers)
         
         response = requests.post(f"{BASE_URL}/api/bulk-upload/catching",
@@ -211,8 +213,8 @@ class TestBulkUploadCatching:
     
     def test_bulk_upload_catching_duplicate(self, auth_headers):
         """Test bulk upload with duplicate case numbers"""
-        # Try to upload same case numbers again
-        case_numbers = ["TEST-PYTEST-C001"]  # Already exists
+        # Try to upload same case numbers again - use existing test case
+        case_numbers = ["TEST-BULK-001"]  # Already exists from previous tests
         excel_file = self.create_catching_excel(case_numbers)
         
         response = requests.post(f"{BASE_URL}/api/bulk-upload/catching",
@@ -255,9 +257,50 @@ class TestBulkUploadSurgery:
     
     def test_bulk_upload_surgery_success(self, auth_headers):
         """Test successful bulk upload of surgery records"""
+        import time
+        timestamp = int(time.time())
+        
+        # First create catching records
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Catching Records"
+        headers = ["Case Number*", "Date (DD/MM/YYYY)*", "Time (HH:MM)*", "Latitude*", "Longitude*", "Address*", "Ward Number", "Remarks"]
+        for col, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col, value=header)
+        hints = ["E.g.", "E.g.", "E.g.", "E.g.", "E.g.", "Full", "Opt", "Opt"]
+        for col, hint in enumerate(hints, 1):
+            ws.cell(row=2, column=col, value=hint)
+        
+        case1 = f"TEST-SURG-{timestamp}-001"
+        case2 = f"TEST-SURG-{timestamp}-002"
+        
+        ws.cell(row=3, column=1, value=case1)
+        ws.cell(row=3, column=2, value="28/01/2026")
+        ws.cell(row=3, column=3, value="10:30")
+        ws.cell(row=3, column=4, value="19.0760")
+        ws.cell(row=3, column=5, value="72.8777")
+        ws.cell(row=3, column=6, value="Test Address 1")
+        
+        ws.cell(row=4, column=1, value=case2)
+        ws.cell(row=4, column=2, value="28/01/2026")
+        ws.cell(row=4, column=3, value="10:30")
+        ws.cell(row=4, column=4, value="19.0760")
+        ws.cell(row=4, column=5, value="72.8777")
+        ws.cell(row=4, column=6, value="Test Address 2")
+        
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        requests.post(f"{BASE_URL}/api/bulk-upload/catching",
+            headers=auth_headers,
+            files={"file": ("test.xlsx", output, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        )
+        
+        # Now upload surgery records
         records = [
-            ["TEST-PYTEST-C001", "28/01/2026", "Male", "15", "No", "", "Normal", "Test surgery"],
-            ["TEST-PYTEST-C002", "28/01/2026", "Female", "20", "No", "", "Normal", "Test surgery female"],
+            [case1, "28/01/2026", "Male", "15", "No", "", "Normal", "Test surgery"],
+            [case2, "28/01/2026", "Female", "20", "No", "", "Normal", "Test surgery female"],
         ]
         excel_file = self.create_surgery_excel(records)
         
@@ -275,6 +318,10 @@ class TestBulkUploadSurgery:
     
     def test_bulk_upload_surgery_cancelled(self, auth_headers):
         """Test bulk upload of cancelled surgery (no medicine deduction)"""
+        import time
+        timestamp = int(time.time())
+        case_num = f"TEST-CANCEL-{timestamp}"
+        
         # First create a new catching record
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -285,7 +332,7 @@ class TestBulkUploadSurgery:
         hints = ["E.g.", "E.g.", "E.g.", "E.g.", "E.g.", "Full", "Opt", "Opt"]
         for col, hint in enumerate(hints, 1):
             ws.cell(row=2, column=col, value=hint)
-        ws.cell(row=3, column=1, value="TEST-PYTEST-CANCEL")
+        ws.cell(row=3, column=1, value=case_num)
         ws.cell(row=3, column=2, value="28/01/2026")
         ws.cell(row=3, column=3, value="10:30")
         ws.cell(row=3, column=4, value="19.0760")
@@ -303,7 +350,7 @@ class TestBulkUploadSurgery:
         
         # Now upload cancelled surgery
         records = [
-            ["TEST-PYTEST-CANCEL", "28/01/2026", "Male", "15", "Yes", "Too weak", "Rough", "Cancelled surgery"],
+            [case_num, "28/01/2026", "Male", "15", "Yes", "Too weak", "Rough", "Cancelled surgery"],
         ]
         excel_file = self.create_surgery_excel(records)
         
