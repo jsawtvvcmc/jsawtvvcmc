@@ -20,7 +20,7 @@ const DailyFeeding = () => {
   const [selectedKennels, setSelectedKennels] = useState([]);
   const [selectedFood, setSelectedFood] = useState({});
   const [mealTime, setMealTime] = useState('Morning');
-  const [photo, setPhoto] = useState('');
+  const [photos, setPhotos] = useState(['', '', '', '']);
 
   useEffect(() => {
     fetchOccupiedKennels();
