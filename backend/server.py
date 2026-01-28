@@ -830,44 +830,70 @@ async def add_surgery_record(
                 if result:
                     photo_links.append(result)
     
+    # Get weight and gender for auto medicine calculation
+    weight = data.get("weight", 0)
+    gender = data.get("gender") or (case.get("initial_observation", {}).get("gender"))
+    
+    # Auto-calculate medicines if weight provided and surgery not cancelled
+    medicines_used = data.get("medicines", {})
+    medicines_to_deduct = data.get("medicines_to_deduct", {})
+    
+    # If weight provided but no explicit medicines_to_deduct, auto-calculate
+    if weight and weight >= 10 and weight <= 30 and data.get("pre_surgery_status") != "Cancel Surgery":
+        if not medicines_to_deduct:
+            # Get all medicines for mapping
+            all_medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+            medicine_map = {m["name"]: m for m in all_medicines}
+            
+            for med_name in MEDICINE_PROTOCOL.keys():
+                dosage = calculate_medicine_dosage(weight, med_name, gender)
+                if dosage > 0 and med_name in medicine_map:
+                    med_id = medicine_map[med_name]["id"]
+                    medicines_to_deduct[med_id] = dosage
+                    medicines_used[med_name] = dosage
+    
     surgery = {
         "surgery_date": data.get("surgery_date", datetime.now(timezone.utc).isoformat()),
-        "pre_surgery_status": data["pre_surgery_status"],
+        "pre_surgery_status": data.get("pre_surgery_status", "Fit for Surgery") if not data.get("cancelled") or data.get("cancelled") == "No" else "Cancel Surgery",
         "cancellation_reason": data.get("cancellation_reason"),
-        "surgery_type": data.get("surgery_type"),
+        "surgery_type": data.get("surgery_type") or ("Ovariohysterectomy" if gender == "Female" else "Castration"),
+        "weight": weight,
+        "skin": data.get("skin", "Normal"),
         "anesthesia_used": data.get("anesthesia_used", []),
         "surgery_start_time": data.get("surgery_start_time"),
         "surgery_end_time": data.get("surgery_end_time"),
         "complications": data.get("complications", False),
         "complication_description": data.get("complication_description"),
-        "post_surgery_status": data.get("post_surgery_status"),
-        "veterinary_signature": data["veterinary_signature"],
+        "post_surgery_status": data.get("post_surgery_status", "Good"),
+        "veterinary_signature": data.get("veterinary_signature", f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}"),
         "remarks": data.get("remarks"),
         "veterinary_id": current_user["id"],
         "photo_links": photo_links,
-        "medicines_used": data.get("medicines_used", {})
+        "medicines_used": medicines_used
     }
     
     # Determine new status
-    if data["pre_surgery_status"] == "Cancel Surgery":
+    is_cancelled = data.get("cancelled") == "Yes" or data.get("pre_surgery_status") == "Cancel Surgery"
+    if is_cancelled:
+        surgery["pre_surgery_status"] = "Cancel Surgery"
         new_status = CaseStatus.SURGERY_CANCELLED.value
         # Free kennel if cancelled
         if case.get("initial_observation"):
-            kennel_number = case["initial_observation"]["kennel_number"]
-            await db.kennels.update_one(
-                {"kennel_number": kennel_number},
-                {
-                    "$set": {
-                        "is_occupied": False,
-                        "current_case_id": None,
-                        "last_updated": datetime.now(timezone.utc).isoformat()
+            kennel_number = case["initial_observation"].get("kennel_number")
+            if kennel_number:
+                await db.kennels.update_one(
+                    {"kennel_number": kennel_number},
+                    {
+                        "$set": {
+                            "is_occupied": False,
+                            "current_case_id": None,
+                            "last_updated": datetime.now(timezone.utc).isoformat()
+                        }
                     }
-                }
-            )
+                )
     else:
         new_status = CaseStatus.SURGERY_COMPLETED.value
-        # Deduct medicine stock based on medicines_used
-        medicines_to_deduct = data.get("medicines_to_deduct", {})
+        # Deduct medicine stock
         for medicine_id, quantity in medicines_to_deduct.items():
             if quantity > 0:
                 await db.medicines.update_one(
