@@ -50,13 +50,23 @@ const DailyFeeding = () => {
     }
   };
 
-  const handlePhotoCapture = (e) => {
+  const handlePhotoCapture = (e, index = 0) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setPhoto(reader.result);
+      reader.onloadend = () => {
+        const newPhotos = [...photos];
+        newPhotos[index] = reader.result;
+        setPhotos(newPhotos);
+      };
       reader.readAsDataURL(file);
     }
+  };
+
+  const removePhoto = (index) => {
+    const newPhotos = [...photos];
+    newPhotos[index] = '';
+    setPhotos(newPhotos);
   };
 
   const handleSubmit = async (e) => {
