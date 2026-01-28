@@ -83,7 +83,8 @@ const MedicineManagement = () => {
         medicine_id: stockAdd.medicine_id,
         quantity: parseFloat(stockAdd.quantity),
         batch_number: stockAdd.batch_number || null,
-        expiry_date: stockAdd.expiry_date || null
+        expiry_date: stockAdd.expiry_date || null,
+        date: stockAdd.received_date || null
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
