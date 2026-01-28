@@ -1273,10 +1273,10 @@ async def bulk_upload_catching(
                         date_obj = row.get('date (dd/mm/yyyy)')
                     else:
                         date_obj = datetime.strptime(date_str, "%d/%m/%Y")
-                except:
+                except (ValueError, TypeError):
                     try:
                         date_obj = datetime.strptime(date_str.split()[0], "%Y-%m-%d")
-                    except:
+                    except (ValueError, TypeError):
                         results["errors"].append(f"Row {row_num}: Invalid date format. Use DD/MM/YYYY")
                         results["failed"] += 1
                         continue
@@ -1286,7 +1286,7 @@ async def bulk_upload_catching(
                     try:
                         time_parts = time_str.split(':')
                         date_obj = date_obj.replace(hour=int(time_parts[0]), minute=int(time_parts[1]))
-                    except:
+                    except (ValueError, IndexError):
                         pass
                 
                 date_obj = date_obj.replace(tzinfo=timezone.utc)
@@ -1299,7 +1299,7 @@ async def bulk_upload_catching(
                         results["errors"].append(f"Row {row_num}: Invalid coordinates")
                         results["failed"] += 1
                         continue
-                except:
+                except (ValueError, TypeError):
                     results["errors"].append(f"Row {row_num}: Invalid coordinates format")
                     results["failed"] += 1
                     continue
