@@ -827,6 +827,25 @@ async def add_daily_treatment(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     
+    # Upload photos to Google Drive (Post-op-care)
+    photo_links = []
+    drive_uploader = await get_drive_uploader(db)
+    
+    if drive_uploader and data.get("photos"):
+        treatment_date = datetime.fromisoformat(data.get("date", datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')) if data.get("date") else datetime.now(timezone.utc)
+        
+        for i, photo in enumerate(data.get("photos", [])[:4]):
+            if photo:
+                result = drive_uploader.upload_image(
+                    base64_data=photo,
+                    form_type="Post-op-care",
+                    case_number=case["case_number"],
+                    date=treatment_date,
+                    photo_index=i
+                )
+                if result:
+                    photo_links.append(result)
+    
     treatment = {
         "id": str(uuid.uuid4()),
         "case_id": case_id,
@@ -840,7 +859,8 @@ async def add_daily_treatment(
         "additional_medicine_dosage": data.get("additional_medicine_dosage"),
         "wound_condition": data["wound_condition"],
         "remarks": data.get("remarks"),
-        "admin_id": current_user["id"]
+        "admin_id": current_user["id"],
+        "photo_links": photo_links
     }
     
     # Deduct medicine stock
@@ -869,7 +889,7 @@ async def add_daily_treatment(
         }
     )
     
-    return {"message": "Treatment record added successfully"}
+    return {"message": "Treatment record added successfully", "photos_uploaded": len(photo_links)}
 
 @api_router.post("/daily-feeding")
 async def create_daily_feeding(
