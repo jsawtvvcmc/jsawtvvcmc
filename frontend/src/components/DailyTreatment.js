@@ -79,15 +79,23 @@ const DailyTreatment = () => {
     });
   };
 
-  const handlePhotoCapture = (e) => {
+  const handlePhotoCapture = (e, index = 0) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData({ ...formData, photo_base64: reader.result });
+        const newPhotos = [...formData.photos];
+        newPhotos[index] = reader.result;
+        setFormData({ ...formData, photos: newPhotos });
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const removePhoto = (index) => {
+    const newPhotos = [...formData.photos];
+    newPhotos[index] = '';
+    setFormData({ ...formData, photos: newPhotos });
   };
 
   const handleSubmit = async (e) => {
