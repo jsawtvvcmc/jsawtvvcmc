@@ -15,6 +15,7 @@ import DailyFeeding from './components/DailyFeeding';
 import ReleaseForm from './components/ReleaseForm';
 import Reports from './components/Reports';
 import Settings from './components/Settings';
+import BulkUpload from './components/BulkUpload';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
