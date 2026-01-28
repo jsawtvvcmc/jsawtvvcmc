@@ -22,7 +22,7 @@ const ReleaseForm = () => {
     location_lat: '',
     location_lng: '',
     address: '',
-    photo_base64: '',
+    photos: ['', '', '', ''],
     remarks: ''
   });
 
