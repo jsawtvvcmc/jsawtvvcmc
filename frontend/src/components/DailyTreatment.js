@@ -321,26 +321,42 @@ const DailyTreatment = () => {
             </div>
 
             {/* Photo */}
-            <div>
-              <Label htmlFor="photo">Photo of Wound/Animal *</Label>
-              <Input
-                id="photo"
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handlePhotoCapture}
-                required
-                data-testid="photo-input"
-              />
-              {formData.photo_base64 && (
-                <div className="mt-2">
-                  <img 
-                    src={formData.photo_base64} 
-                    alt="Treatment" 
-                    className="max-w-xs rounded-lg border-2 border-green-500"
-                  />
-                </div>
-              )}
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <Label className="text-lg font-semibold">📸 Photos (4 max, first required)</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                {[0, 1, 2, 3].map((index) => (
+                  <div key={index} className="space-y-2">
+                    <Label className="text-sm">
+                      Photo {index + 1} {index === 0 ? '*' : '(optional)'}
+                    </Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => handlePhotoCapture(e, index)}
+                      required={index === 0}
+                      data-testid={`photo-input-${index}`}
+                      className="text-xs"
+                    />
+                    {formData.photos[index] && (
+                      <div className="relative">
+                        <img 
+                          src={formData.photos[index]} 
+                          alt={`Photo ${index + 1}`} 
+                          className="w-full h-24 object-cover rounded border-2 border-green-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Remarks */}
