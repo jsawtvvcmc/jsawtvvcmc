@@ -30,7 +30,8 @@ const MedicineManagement = () => {
     medicine_id: '',
     quantity: '',
     batch_number: '',
-    expiry_date: ''
+    expiry_date: '',
+    received_date: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
@@ -88,7 +89,7 @@ const MedicineManagement = () => {
       });
       
       setMessage({ type: 'success', text: 'Stock added successfully!' });
-      setStockAdd({ medicine_id: '', quantity: '', batch_number: '', expiry_date: '' });
+      setStockAdd({ medicine_id: '', quantity: '', batch_number: '', expiry_date: '', received_date: new Date().toISOString().split('T')[0] });
       fetchMedicines();
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to add stock' });
@@ -285,6 +286,19 @@ const MedicineManagement = () => {
                     required
                     data-testid="quantity-input"
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="received_date">Date Received *</Label>
+                  <Input
+                    id="received_date"
+                    type="date"
+                    value={stockAdd.received_date}
+                    onChange={(e) => setStockAdd({...stockAdd, received_date: e.target.value})}
+                    required
+                    data-testid="received-date-input"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Select the actual date when stock was received</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
