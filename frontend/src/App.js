@@ -161,7 +161,7 @@ function AppRoutes() {
       <Route path="/reports" element={
         <PrivateRoute>
           <DashboardLayout>
-            <ComingSoon title="Reports & Analytics" description="View comprehensive reports and statistics" />
+            <Reports />
           </DashboardLayout>
         </PrivateRoute>
       } />
