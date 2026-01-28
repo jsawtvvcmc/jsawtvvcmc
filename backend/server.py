@@ -264,48 +264,120 @@ async def get_system_config():
 async def root():
     return {"message": "ABC Program Management System API", "version": "1.0"}
 
-# ==================== GOOGLE DRIVE ====================
-from google_drive_service import get_drive_service
+# ==================== GOOGLE DRIVE OAUTH ====================
+from google_drive_oauth import (
+    get_authorization_url, 
+    exchange_code_for_credentials,
+    test_drive_connection,
+    upload_image_to_drive
+)
+from fastapi.responses import RedirectResponse
 
-@api_router.get("/drive/test")
-async def test_google_drive_connection(current_user: dict = Depends(get_current_user)):
-    """Test Google Drive connection"""
-    drive_service = get_drive_service()
-    result = drive_service.test_connection()
+@api_router.get("/drive/connect")
+async def connect_google_drive(current_user: dict = Depends(get_current_user)):
+    """Initiate Google Drive OAuth flow"""
+    try:
+        authorization_url, state = get_authorization_url()
+        
+        # Store state in database for verification
+        await db.oauth_states.update_one(
+            {"user_id": current_user["id"]},
+            {"$set": {
+                "user_id": current_user["id"],
+                "state": state,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+        
+        return {"authorization_url": authorization_url}
+    except Exception as e:
+        logger.error(f"Failed to initiate OAuth: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to initiate OAuth: {str(e)}")
+
+@api_router.get("/drive/callback")
+async def drive_oauth_callback(code: str, state: str = None):
+    """Handle Google Drive OAuth callback"""
+    try:
+        # Exchange code for credentials
+        credentials = exchange_code_for_credentials(code)
+        
+        # Find user by state (or use default super user for now)
+        oauth_state = await db.oauth_states.find_one({"state": state}) if state else None
+        user_id = oauth_state["user_id"] if oauth_state else "system"
+        
+        # Store credentials in database
+        await db.drive_credentials.update_one(
+            {"user_id": user_id},
+            {"$set": {
+                "user_id": user_id,
+                **credentials,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+        
+        logger.info(f"Google Drive connected for user {user_id}")
+        
+        # Get frontend URL for redirect
+        frontend_url = os.environ.get("FRONTEND_URL", "https://petcare-system-12.preview.emergentagent.com")
+        
+        # Redirect to frontend with success message
+        return RedirectResponse(url=f"{frontend_url}/?drive_connected=true")
+        
+    except Exception as e:
+        logger.error(f"OAuth callback failed: {str(e)}")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://petcare-system-12.preview.emergentagent.com")
+        return RedirectResponse(url=f"{frontend_url}/?drive_error={str(e)}")
+
+@api_router.get("/drive/status")
+async def get_drive_status(current_user: dict = Depends(get_current_user)):
+    """Check Google Drive connection status"""
+    # Check for user-specific credentials first, then system credentials
+    creds = await db.drive_credentials.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    if not creds:
+        creds = await db.drive_credentials.find_one({"user_id": "system"}, {"_id": 0})
+    
+    if not creds:
+        return {"connected": False, "message": "Google Drive not connected"}
+    
+    # Test the connection
+    result = test_drive_connection(creds)
     return result
 
 @api_router.post("/drive/upload-test")
 async def test_drive_upload(current_user: dict = Depends(get_current_user)):
     """Test upload a small image to Google Drive"""
-    drive_service = get_drive_service()
+    # Get credentials
+    creds = await db.drive_credentials.find_one({"user_id": current_user["id"]}, {"_id": 0})
+    if not creds:
+        creds = await db.drive_credentials.find_one({"user_id": "system"}, {"_id": 0})
     
-    if not drive_service.is_connected():
-        raise HTTPException(status_code=503, detail="Google Drive not connected")
+    if not creds:
+        raise HTTPException(status_code=400, detail="Google Drive not connected. Please connect first.")
     
-    # Create a simple 1x1 red pixel PNG for testing
+    # Test image (1x1 red pixel PNG)
     test_image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
     
-    result = drive_service.upload_image(
+    folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
+    
+    result = upload_image_to_drive(
+        creds_data=creds,
         base64_data=test_image_base64,
         filename=f"test_upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
-        case_number="TEST"
+        folder_id=folder_id
     )
     
     if result:
+        # Update credentials if they were refreshed
+        if result.get('updated_credentials'):
+            await db.drive_credentials.update_one(
+                {"user_id": creds.get("user_id", "system")},
+                {"$set": result['updated_credentials']}
+            )
         return {"success": True, "file": result}
     else:
         raise HTTPException(status_code=500, detail="Upload failed")
-
-@api_router.get("/drive/files")
-async def list_drive_files(current_user: dict = Depends(get_current_user)):
-    """List files in Google Drive folder"""
-    drive_service = get_drive_service()
-    
-    if not drive_service.is_connected():
-        raise HTTPException(status_code=503, detail="Google Drive not connected")
-    
-    files = drive_service.list_files()
-    return {"files": files, "count": len(files)}
 
 # ==================== USER MANAGEMENT ====================
 
