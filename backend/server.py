@@ -739,6 +739,25 @@ async def add_surgery_record(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     
+    # Upload photos to Google Drive
+    photo_links = []
+    drive_uploader = await get_drive_uploader(db)
+    
+    if drive_uploader and data.get("photos"):
+        surgery_date = datetime.fromisoformat(data.get("surgery_date", datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')) if data.get("surgery_date") else datetime.now(timezone.utc)
+        
+        for i, photo in enumerate(data.get("photos", [])[:4]):
+            if photo:
+                result = drive_uploader.upload_image(
+                    base64_data=photo,
+                    form_type="Surgery",
+                    case_number=case["case_number"],
+                    date=surgery_date,
+                    photo_index=i
+                )
+                if result:
+                    photo_links.append(result)
+    
     surgery = {
         "surgery_date": data.get("surgery_date", datetime.now(timezone.utc).isoformat()),
         "pre_surgery_status": data["pre_surgery_status"],
@@ -752,7 +771,9 @@ async def add_surgery_record(
         "post_surgery_status": data.get("post_surgery_status"),
         "veterinary_signature": data["veterinary_signature"],
         "remarks": data.get("remarks"),
-        "veterinary_id": current_user["id"]
+        "veterinary_id": current_user["id"],
+        "photo_links": photo_links,
+        "medicines_used": data.get("medicines_used", {})
     }
     
     # Determine new status
@@ -773,12 +794,14 @@ async def add_surgery_record(
             )
     else:
         new_status = CaseStatus.SURGERY_COMPLETED.value
-        # Deduct medicine stock for anesthesia
-        for medicine_id in data.get("anesthesia_used", []):
-            await db.medicines.update_one(
-                {"id": medicine_id},
-                {"$inc": {"current_stock": -1}}
-            )
+        # Deduct medicine stock based on medicines_used
+        medicines_to_deduct = data.get("medicines_to_deduct", {})
+        for medicine_id, quantity in medicines_to_deduct.items():
+            if quantity > 0:
+                await db.medicines.update_one(
+                    {"id": medicine_id},
+                    {"$inc": {"current_stock": -quantity}}
+                )
     
     await db.cases.update_one(
         {"id": case_id},
@@ -791,7 +814,7 @@ async def add_surgery_record(
         }
     )
     
-    return {"message": "Surgery record added successfully", "status": new_status}
+    return {"message": "Surgery record added successfully", "status": new_status, "photos_uploaded": len(photo_links)}
 
 @api_router.post("/cases/{case_id}/treatment")
 async def add_daily_treatment(
