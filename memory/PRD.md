@@ -38,13 +38,21 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 ### Forms & Workflows ✅
 - [x] **Catching Form** - GPS extraction from photo EXIF data, photo upload with camera option
 - [x] **Initial Observations** - Kennel assignment, animal assessment
-- [x] **Surgery Form** - Auto-calculated medicine dosages (19 medicines), all fields visible and editable
+- [x] **Surgery Form** - Auto-calculated medicine dosages (18 medicines), all fields visible and editable
 - [x] **Daily Treatment** - Post-surgery care logging
 - [x] **Daily Feeding** - Meal tracking
 - [x] **Release Form** - Animal release documentation
 - [x] **User Management** - CRUD for users
 - [x] **Medicine Management** - Inventory tracking
 - [x] **Food Stock Management** - Food inventory
+- [x] **Bulk Upload** ✅ NEW (Jan 28, 2026) - Import Catching & Surgery records via Excel
+
+### Auto Medicine Calculation ✅ NEW (Jan 28, 2026)
+- [x] Medicine protocol with weight-based dosage rules
+- [x] Fixed doses for ARV, Tribivet, Avil (1 ml/unit each)
+- [x] Weight-based calculation (per 10kg) for Xylazine, Ketamine, etc.
+- [x] Female-only medicines (Vicryl 2)
+- [x] Auto-deduction from stock on surgery completion
 
 ### Reports ✅ (Fixed Jan 28, 2026)
 - [x] **1. Catching Sheet** - Daily report of animals caught (printable)
@@ -61,11 +69,15 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 
 ## Prioritized Backlog
 
+### P0 - Critical
+- [ ] **Multi-User Google Drive Auth** - Currently single `token.json` used for all users
+  - Fix: Store OAuth credentials per-user in database
+  - Required for production deployment
+
 ### P1 - High Priority
 - [x] ~~**Google Drive Integration**~~ ✅ COMPLETED (Jan 28, 2026)
-  - OAuth-based authentication
-  - Folder hierarchy: FormType/Year/Month/a-b-c-d/
-  - Filename conventions implemented
+- [x] ~~**Bulk Upload Module**~~ ✅ COMPLETED (Jan 28, 2026)
+- [x] ~~**Auto Medicine Calculation**~~ ✅ COMPLETED (Jan 28, 2026)
   
 ### P2 - Medium Priority
 - [ ] **Progressive Web App (PWA)** - Make app installable on Android devices
@@ -82,15 +94,20 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| /api/token | POST | User login |
-| /api/users/me | GET | Current user info |
+| /api/auth/login | POST | User login |
+| /api/auth/me | GET | Current user info |
 | /api/config | GET | System configuration |
 | /api/stats | GET | Dashboard statistics |
 | /api/cases | GET/POST | Case management |
 | /api/medicines | GET/POST | Medicine inventory |
-| /api/food | GET/POST | Food inventory |
+| /api/food-items | GET/POST | Food inventory |
 | /api/users | GET/POST | User management |
 | /api/kennels | GET | Kennel status |
+| /api/bulk-upload/template/{type} | GET | Download Excel template (catching/surgery) |
+| /api/bulk-upload/catching | POST | Bulk upload catching records |
+| /api/bulk-upload/surgery | POST | Bulk upload surgery records |
+| /api/medicine-protocol | GET | Get medicine dosage rules |
+| /api/calculate-medicines | POST | Calculate medicines for weight/gender |
 
 ---
 
@@ -103,6 +120,26 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 ## Key Files Reference
 - `/app/backend/server.py` - Main backend (all routes)
 - `/app/backend/models.py` - Database models
+- `/app/frontend/src/components/BulkUpload.js` - Bulk upload module
 - `/app/frontend/src/components/Reports.js` - Custom reports
 - `/app/frontend/src/components/SurgeryForm.js` - Surgery with auto-calculation
 - `/app/frontend/src/components/CatchingForm.js` - GPS extraction from photos
+
+---
+
+## Session Updates - Jan 28, 2026
+
+### Completed
+1. **Bulk Upload Module** - Upload Excel files for Catching and Surgery records
+   - Template download with sample data
+   - Validation for required fields
+   - Error reporting per row
+   
+2. **Auto Medicine Calculation** - Automatic medicine stock deduction
+   - Weight-based dosage calculation (10-30 kg range)
+   - 18 medicines with specific protocols
+   - Female-only medicines handled correctly
+   - Cancelled surgeries skip deduction
+
+### Known Issues
+- **Google Drive Multi-User** - Single token.json not suitable for multiple users
