@@ -20,6 +20,7 @@ const Navigation = () => {
       { path: '/food-stock', label: 'Food Stock', icon: '🍞', roles: ['Super User', 'Admin'] },
       { path: '/users', label: 'Users', icon: '👥', roles: ['Super User', 'Admin'] },
       { path: '/reports', label: 'Reports', icon: '📄', roles: ['Super User', 'Admin'] },
+      { path: '/settings', label: 'Settings', icon: '⚙️', roles: ['Super User', 'Admin'] },
     ];
     
     return allItems.filter(item => item.roles.includes(role));
