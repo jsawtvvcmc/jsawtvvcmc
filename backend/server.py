@@ -1412,10 +1412,10 @@ async def bulk_upload_surgery(
                         surgery_date = row.get('surgery date (dd/mm/yyyy)')
                     else:
                         surgery_date = datetime.strptime(date_str, "%d/%m/%Y")
-                except:
+                except (ValueError, TypeError):
                     try:
                         surgery_date = datetime.strptime(date_str.split()[0], "%Y-%m-%d")
-                    except:
+                    except (ValueError, TypeError):
                         results["errors"].append(f"Row {row_num}: Invalid date format. Use DD/MM/YYYY")
                         results["failed"] += 1
                         continue
@@ -1436,7 +1436,7 @@ async def bulk_upload_surgery(
                         results["errors"].append(f"Row {row_num}: Weight must be between 10-30 kg")
                         results["failed"] += 1
                         continue
-                except:
+                except (ValueError, TypeError):
                     results["errors"].append(f"Row {row_num}: Invalid weight format")
                     results["failed"] += 1
                     continue
