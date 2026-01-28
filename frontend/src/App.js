@@ -14,6 +14,7 @@ import DailyTreatment from './components/DailyTreatment';
 import DailyFeeding from './components/DailyFeeding';
 import ReleaseForm from './components/ReleaseForm';
 import Reports from './components/Reports';
+import Settings from './components/Settings';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
@@ -162,6 +163,14 @@ function AppRoutes() {
         <PrivateRoute>
           <DashboardLayout>
             <Reports />
+          </DashboardLayout>
+        </PrivateRoute>
+      } />
+      
+      <Route path="/settings" element={
+        <PrivateRoute>
+          <DashboardLayout>
+            <Settings />
           </DashboardLayout>
         </PrivateRoute>
       } />
