@@ -23,7 +23,7 @@ const CatchingForm = () => {
     location_lng: '',
     address: '',
     ward_number: '',
-    photo_base64: '',
+    photos: ['', '', '', ''],  // Support up to 4 photos
     remarks: ''
   });
 
