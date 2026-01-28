@@ -32,6 +32,7 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 - [x] Role-based access control for 6 user roles
 - [x] Dashboard with overview statistics
 - [x] 300 kennels initialized in database
+- [x] **18 Default Medicines initialized** (Jan 28, 2026) - All surgery medicines pre-loaded
 
 ### Forms & Workflows ✅
 - [x] **Catching Form** - GPS extraction from photo EXIF data, photo upload with camera option
