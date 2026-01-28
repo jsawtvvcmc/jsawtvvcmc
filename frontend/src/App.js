@@ -13,6 +13,7 @@ import SurgeryForm from './components/SurgeryForm';
 import DailyTreatment from './components/DailyTreatment';
 import DailyFeeding from './components/DailyFeeding';
 import ReleaseForm from './components/ReleaseForm';
+import Reports from './components/Reports';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
