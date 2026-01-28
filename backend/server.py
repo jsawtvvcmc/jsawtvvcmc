@@ -1098,6 +1098,462 @@ async def add_release_record(
     
     return {"message": "Release record added successfully", "photos_uploaded": len(photo_links)}
 
+# ==================== BULK UPLOAD ENDPOINTS ====================
+
+@api_router.get("/bulk-upload/template/{template_type}")
+async def download_bulk_upload_template(
+    template_type: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Download Excel template for bulk upload"""
+    if template_type not in ["catching", "surgery"]:
+        raise HTTPException(status_code=400, detail="Invalid template type. Use 'catching' or 'surgery'")
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    
+    # Styles
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    required_fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    if template_type == "catching":
+        ws.title = "Catching Records"
+        headers = [
+            ("Case Number*", "E.g., JAPP-001-2024", True),
+            ("Date (DD/MM/YYYY)*", "E.g., 25/12/2024", True),
+            ("Time (HH:MM)*", "E.g., 14:30", True),
+            ("Latitude*", "E.g., 19.0760", True),
+            ("Longitude*", "E.g., 72.8777", True),
+            ("Address*", "Full address", True),
+            ("Ward Number", "Optional", False),
+            ("Remarks", "Optional notes", False),
+        ]
+    else:  # surgery
+        ws.title = "Surgery Records"
+        headers = [
+            ("Case Number*", "E.g., JAPP-001-2024", True),
+            ("Surgery Date (DD/MM/YYYY)*", "E.g., 26/12/2024", True),
+            ("Gender*", "Male or Female", True),
+            ("Weight (kg)*", "E.g., 15 (10-30 kg)", True),
+            ("Surgery Cancelled*", "Yes or No", True),
+            ("Cancellation Reason", "Required if cancelled (Too weak, Under age, Looks ill, etc.)", False),
+            ("Skin Condition", "Normal, Rough, or Visible Infection", False),
+            ("Remarks", "Optional notes", False),
+        ]
+    
+    # Write headers
+    for col, (header, hint, required) in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+        
+        # Add hint row
+        hint_cell = ws.cell(row=2, column=col, value=hint)
+        hint_cell.font = Font(italic=True, color="666666")
+        hint_cell.border = thin_border
+        if required:
+            hint_cell.fill = required_fill
+        
+        # Adjust column width
+        ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = max(len(header), len(hint)) + 5
+    
+    # Add sample data row
+    if template_type == "catching":
+        sample_data = ["JAPP-001-2024", "25/12/2024", "14:30", "19.0760", "72.8777", "123 Main Street, Mumbai", "Ward 5", "Sample remark"]
+    else:
+        sample_data = ["JAPP-001-2024", "26/12/2024", "Male", "15", "No", "", "Normal", "Sample remark"]
+    
+    for col, value in enumerate(sample_data, 1):
+        cell = ws.cell(row=3, column=col, value=value)
+        cell.border = thin_border
+    
+    # Save to bytes
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    filename = f"bulk_upload_{template_type}_template.xlsx"
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@api_router.post("/bulk-upload/catching")
+async def bulk_upload_catching(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Bulk upload catching records from Excel file"""
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Please upload an Excel file (.xlsx or .xls)")
+    
+    try:
+        contents = await file.read()
+        df = pd.read_excel(BytesIO(contents), skiprows=1)  # Skip hint row
+        
+        # Normalize column names
+        df.columns = df.columns.str.strip().str.lower().str.replace('*', '', regex=False)
+        
+        results = {"success": 0, "failed": 0, "errors": []}
+        
+        # Get project code
+        config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+        project_code = config.get("project_code", "JAPP") if config else "JAPP"
+        
+        for idx, row in df.iterrows():
+            row_num = idx + 3  # Account for header and hint rows
+            try:
+                # Validate required fields
+                case_number = str(row.get('case number', '')).strip()
+                if not case_number or case_number == 'nan':
+                    results["errors"].append(f"Row {row_num}: Missing case number")
+                    results["failed"] += 1
+                    continue
+                
+                # Check if case already exists
+                existing = await db.cases.find_one({"case_number": case_number})
+                if existing:
+                    results["errors"].append(f"Row {row_num}: Case {case_number} already exists")
+                    results["failed"] += 1
+                    continue
+                
+                # Parse date and time
+                date_str = str(row.get('date (dd/mm/yyyy)', '')).strip()
+                time_str = str(row.get('time (hh:mm)', '')).strip()
+                
+                if not date_str or date_str == 'nan':
+                    results["errors"].append(f"Row {row_num}: Missing date")
+                    results["failed"] += 1
+                    continue
+                
+                # Parse the date
+                try:
+                    if isinstance(row.get('date (dd/mm/yyyy)'), datetime):
+                        date_obj = row.get('date (dd/mm/yyyy)')
+                    else:
+                        date_obj = datetime.strptime(date_str, "%d/%m/%Y")
+                except:
+                    try:
+                        date_obj = datetime.strptime(date_str.split()[0], "%Y-%m-%d")
+                    except:
+                        results["errors"].append(f"Row {row_num}: Invalid date format. Use DD/MM/YYYY")
+                        results["failed"] += 1
+                        continue
+                
+                # Parse time
+                if time_str and time_str != 'nan':
+                    try:
+                        time_parts = time_str.split(':')
+                        date_obj = date_obj.replace(hour=int(time_parts[0]), minute=int(time_parts[1]))
+                    except:
+                        pass
+                
+                date_obj = date_obj.replace(tzinfo=timezone.utc)
+                
+                # Validate coordinates
+                try:
+                    lat = float(row.get('latitude', 0))
+                    lng = float(row.get('longitude', 0))
+                    if lat == 0 or lng == 0:
+                        results["errors"].append(f"Row {row_num}: Invalid coordinates")
+                        results["failed"] += 1
+                        continue
+                except:
+                    results["errors"].append(f"Row {row_num}: Invalid coordinates format")
+                    results["failed"] += 1
+                    continue
+                
+                address = str(row.get('address', '')).strip()
+                if not address or address == 'nan':
+                    results["errors"].append(f"Row {row_num}: Missing address")
+                    results["failed"] += 1
+                    continue
+                
+                ward_number = str(row.get('ward number', '')).strip()
+                if ward_number == 'nan':
+                    ward_number = None
+                
+                remarks = str(row.get('remarks', '')).strip()
+                if remarks == 'nan':
+                    remarks = None
+                
+                # Create case
+                case_dict = {
+                    "id": str(uuid.uuid4()),
+                    "case_number": case_number,
+                    "status": CaseStatus.CAUGHT.value,
+                    "project_code": project_code,
+                    "catching": {
+                        "date_time": date_obj.isoformat(),
+                        "location_lat": lat,
+                        "location_lng": lng,
+                        "address": address,
+                        "ward_number": ward_number,
+                        "photo_links": [],
+                        "remarks": remarks,
+                        "driver_id": current_user["id"],
+                        "bulk_uploaded": True
+                    },
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                await db.cases.insert_one(case_dict)
+                results["success"] += 1
+                
+            except Exception as e:
+                results["errors"].append(f"Row {row_num}: {str(e)}")
+                results["failed"] += 1
+        
+        return {
+            "message": f"Bulk upload completed. {results['success']} records created, {results['failed']} failed.",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Bulk upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+@api_router.post("/bulk-upload/surgery")
+async def bulk_upload_surgery(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Bulk upload surgery records from Excel file"""
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Please upload an Excel file (.xlsx or .xls)")
+    
+    try:
+        contents = await file.read()
+        df = pd.read_excel(BytesIO(contents), skiprows=1)  # Skip hint row
+        
+        # Normalize column names
+        df.columns = df.columns.str.strip().str.lower().str.replace('*', '', regex=False)
+        
+        results = {"success": 0, "failed": 0, "errors": [], "medicines_deducted": {}}
+        
+        # Get all medicines for mapping
+        medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+        medicine_map = {m["name"]: m for m in medicines}
+        
+        for idx, row in df.iterrows():
+            row_num = idx + 3  # Account for header and hint rows
+            try:
+                # Validate required fields
+                case_number = str(row.get('case number', '')).strip()
+                if not case_number or case_number == 'nan':
+                    results["errors"].append(f"Row {row_num}: Missing case number")
+                    results["failed"] += 1
+                    continue
+                
+                # Find the case
+                case = await db.cases.find_one({"case_number": case_number}, {"_id": 0})
+                if not case:
+                    results["errors"].append(f"Row {row_num}: Case {case_number} not found")
+                    results["failed"] += 1
+                    continue
+                
+                # Check if surgery already exists
+                if case.get("surgery"):
+                    results["errors"].append(f"Row {row_num}: Case {case_number} already has surgery record")
+                    results["failed"] += 1
+                    continue
+                
+                # Parse date
+                date_str = str(row.get('surgery date (dd/mm/yyyy)', '')).strip()
+                try:
+                    if isinstance(row.get('surgery date (dd/mm/yyyy)'), datetime):
+                        surgery_date = row.get('surgery date (dd/mm/yyyy)')
+                    else:
+                        surgery_date = datetime.strptime(date_str, "%d/%m/%Y")
+                except:
+                    try:
+                        surgery_date = datetime.strptime(date_str.split()[0], "%Y-%m-%d")
+                    except:
+                        results["errors"].append(f"Row {row_num}: Invalid date format. Use DD/MM/YYYY")
+                        results["failed"] += 1
+                        continue
+                
+                surgery_date = surgery_date.replace(tzinfo=timezone.utc)
+                
+                # Validate gender
+                gender = str(row.get('gender', '')).strip().title()
+                if gender not in ['Male', 'Female']:
+                    results["errors"].append(f"Row {row_num}: Invalid gender. Use 'Male' or 'Female'")
+                    results["failed"] += 1
+                    continue
+                
+                # Validate weight
+                try:
+                    weight = float(row.get('weight (kg)', 0))
+                    if weight < 10 or weight > 30:
+                        results["errors"].append(f"Row {row_num}: Weight must be between 10-30 kg")
+                        results["failed"] += 1
+                        continue
+                except:
+                    results["errors"].append(f"Row {row_num}: Invalid weight format")
+                    results["failed"] += 1
+                    continue
+                
+                # Check if cancelled
+                cancelled = str(row.get('surgery cancelled', 'No')).strip().lower()
+                is_cancelled = cancelled in ['yes', 'y', 'true', '1']
+                
+                cancellation_reason = None
+                if is_cancelled:
+                    cancellation_reason = str(row.get('cancellation reason', '')).strip()
+                    if not cancellation_reason or cancellation_reason == 'nan':
+                        results["errors"].append(f"Row {row_num}: Cancellation reason is required when surgery is cancelled")
+                        results["failed"] += 1
+                        continue
+                
+                skin = str(row.get('skin condition', 'Normal')).strip()
+                if skin == 'nan':
+                    skin = 'Normal'
+                
+                remarks = str(row.get('remarks', '')).strip()
+                if remarks == 'nan':
+                    remarks = None
+                
+                # Calculate and deduct medicines if not cancelled
+                medicines_used = {}
+                medicines_to_deduct = {}
+                
+                if not is_cancelled:
+                    for med_name, protocol in MEDICINE_PROTOCOL.items():
+                        dosage = calculate_medicine_dosage(weight, med_name, gender)
+                        if dosage > 0 and med_name in medicine_map:
+                            med_id = medicine_map[med_name]["id"]
+                            medicines_used[med_name] = dosage
+                            medicines_to_deduct[med_id] = dosage
+                            
+                            # Deduct from stock
+                            await db.medicines.update_one(
+                                {"id": med_id},
+                                {"$inc": {"current_stock": -dosage}}
+                            )
+                            
+                            # Track deductions
+                            if med_name not in results["medicines_deducted"]:
+                                results["medicines_deducted"][med_name] = 0
+                            results["medicines_deducted"][med_name] += dosage
+                
+                # Build surgery record
+                surgery = {
+                    "surgery_date": surgery_date.isoformat(),
+                    "pre_surgery_status": "Cancel Surgery" if is_cancelled else "Fit for Surgery",
+                    "cancellation_reason": cancellation_reason,
+                    "surgery_type": "Ovariohysterectomy" if gender == "Female" else "Castration",
+                    "weight": weight,
+                    "skin": skin,
+                    "anesthesia_used": [],
+                    "complications": False,
+                    "post_surgery_status": None if is_cancelled else "Good",
+                    "veterinary_signature": f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}",
+                    "remarks": remarks,
+                    "veterinary_id": current_user["id"],
+                    "photo_links": [],
+                    "medicines_used": medicines_used,
+                    "bulk_uploaded": True
+                }
+                
+                # Determine status
+                new_status = CaseStatus.SURGERY_CANCELLED.value if is_cancelled else CaseStatus.SURGERY_COMPLETED.value
+                
+                # Update case with surgery record and initial observation if missing
+                update_data = {
+                    "surgery": surgery,
+                    "status": new_status,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                # Add initial observation if not present (for bulk uploaded catching records)
+                if not case.get("initial_observation"):
+                    update_data["initial_observation"] = {
+                        "gender": gender,
+                        "kennel_number": None,
+                        "approximate_age": "Adult 2-8 years",
+                        "color_markings": "Unknown",
+                        "body_condition": "Normal",
+                        "temperament": "Calm",
+                        "visible_injuries": False,
+                        "catcher_id": current_user["id"],
+                        "observation_date": surgery_date.isoformat(),
+                        "bulk_uploaded": True
+                    }
+                
+                await db.cases.update_one(
+                    {"id": case["id"]},
+                    {"$set": update_data}
+                )
+                
+                results["success"] += 1
+                
+            except Exception as e:
+                results["errors"].append(f"Row {row_num}: {str(e)}")
+                results["failed"] += 1
+        
+        return {
+            "message": f"Bulk upload completed. {results['success']} records processed, {results['failed']} failed.",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Bulk upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+# ==================== AUTO MEDICINE CALCULATION ENDPOINTS ====================
+
+@api_router.get("/medicine-protocol")
+async def get_medicine_protocol(current_user: dict = Depends(get_current_user)):
+    """Get the default medicine protocol with dosage calculations"""
+    return MEDICINE_PROTOCOL
+
+@api_router.post("/calculate-medicines")
+async def calculate_surgery_medicines(
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Calculate medicine dosages for a surgery based on weight and gender"""
+    weight = data.get("weight", 0)
+    gender = data.get("gender", "Male")
+    
+    if weight < 10 or weight > 30:
+        raise HTTPException(status_code=400, detail="Weight must be between 10-30 kg")
+    
+    # Get all medicines
+    medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+    medicine_map = {m["name"]: m for m in medicines}
+    
+    calculated = {}
+    for med_name in MEDICINE_PROTOCOL.keys():
+        dosage = calculate_medicine_dosage(weight, med_name, gender)
+        if med_name in medicine_map:
+            med = medicine_map[med_name]
+            calculated[med_name] = {
+                "medicine_id": med["id"],
+                "dosage": dosage,
+                "unit": med["unit"],
+                "current_stock": med["current_stock"],
+                "sufficient_stock": med["current_stock"] >= dosage
+            }
+    
+    return {
+        "weight": weight,
+        "gender": gender,
+        "medicines": calculated
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
