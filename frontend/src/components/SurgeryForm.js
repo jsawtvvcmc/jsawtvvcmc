@@ -139,38 +139,38 @@ const SurgeryForm = () => {
       const surgeryData = {
         case_id: formData.case_id,
         weight: parseFloat(formData.weight),
+        gender: selectedCase?.initial_observation?.gender,
         skin: formData.skin,
         photos: photos,
         cancelled: formData.cancelled,
         cancellation_reason: formData.cancelled === 'Yes' ? formData.cancellation_reason : null,
         medicines: formData.cancelled === 'No' ? {
-          arv: formData.arv,
-          xylazine: formData.xylazine,
-          melonex: formData.melonex,
-          atropine: formData.atropine,
-          diazepam: formData.diazepam,
-          prednisolone: formData.prednisolone,
-          ketamine: formData.ketamine,
-          tribivet: formData.tribivet,
-          intacef_tazo: formData.intacef_tazo,
-          adrenaline: formData.adrenaline,
-          alu_spray: formData.alu_spray,
-          ethamsylate: formData.ethamsylate,
-          tincture: formData.tincture,
-          avil: formData.avil,
-          vicryl_1: formData.vicryl_1,
-          catgut: formData.catgut,
-          vicryl_2: formData.vicryl_2,
-          metrinedasol: formData.metrinedasol,
-          ketamine_diazepam: formData.ketamine_diazepam
+          "Anti-Rabies Vaccine": formData.arv,
+          "Xylazine": formData.xylazine,
+          "Melonex": formData.melonex,
+          "Atropine": formData.atropine,
+          "Diazepam": formData.diazepam,
+          "Prednisolone": formData.prednisolone,
+          "Ketamine": formData.ketamine,
+          "Tribivet": formData.tribivet,
+          "Intacef Tazo": formData.intacef_tazo,
+          "Adrenaline": formData.adrenaline,
+          "Alu Spray": formData.alu_spray,
+          "Ethamsylate": formData.ethamsylate,
+          "Tincture": formData.tincture,
+          "Avil": formData.avil,
+          "Vicryl 1": formData.vicryl_1,
+          "Catgut": formData.catgut,
+          "Vicryl 2": formData.vicryl_2,
+          "Metronidazole": formData.metrinedasol
         } : {}
       };
 
-      await axios.post(`${API}/cases/${formData.case_id}/surgery`, surgeryData, {
+      const response = await axios.post(`${API}/cases/${formData.case_id}/surgery`, surgeryData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setMessage({ type: 'success', text: 'Surgery record saved successfully!' });
+      setMessage({ type: 'success', text: `Surgery record saved! Medicine stock automatically deducted.` });
       // Reset form
       setFormData({
         case_id: '', weight: '', skin: 'Normal', cancelled: 'No', cancellation_reason: '',
