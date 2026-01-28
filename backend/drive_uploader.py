@@ -1,0 +1,264 @@
+"""
+Google Drive Upload Utility for J-APP
+Handles folder structure and file naming conventions
+"""
+import os
+import io
+import base64
+import logging
+from datetime import datetime
+from typing import Optional, List, Dict
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request as GoogleRequest
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+
+logger = logging.getLogger(__name__)
+
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+
+class DriveUploader:
+    def __init__(self, creds_data: dict, root_folder_id: str):
+        """Initialize with OAuth credentials and root folder ID"""
+        self.creds_data = creds_data
+        self.root_folder_id = root_folder_id
+        self.service = None
+        self.folder_cache = {}  # Cache folder IDs to avoid repeated lookups
+        self._init_service()
+    
+    def _init_service(self):
+        """Initialize Google Drive service"""
+        credentials = Credentials(
+            token=self.creds_data["access_token"],
+            refresh_token=self.creds_data.get("refresh_token"),
+            token_uri=self.creds_data.get("token_uri", "https://oauth2.googleapis.com/token"),
+            client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+            client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+            scopes=self.creds_data.get("scopes", SCOPES)
+        )
+        
+        # Refresh if expired
+        if credentials.expired and credentials.refresh_token:
+            credentials.refresh(GoogleRequest())
+            # Update stored credentials
+            self.creds_data["access_token"] = credentials.token
+            if credentials.expiry:
+                self.creds_data["expiry"] = credentials.expiry.isoformat()
+        
+        self.service = build('drive', 'v3', credentials=credentials)
+    
+    def _get_or_create_folder(self, folder_name: str, parent_id: str) -> str:
+        """Get existing folder or create new one"""
+        cache_key = f"{parent_id}/{folder_name}"
+        
+        if cache_key in self.folder_cache:
+            return self.folder_cache[cache_key]
+        
+        # Search for existing folder
+        query = f"name='{folder_name}' and '{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        results = self.service.files().list(q=query, fields="files(id, name)").execute()
+        files = results.get('files', [])
+        
+        if files:
+            folder_id = files[0]['id']
+        else:
+            # Create folder
+            file_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [parent_id]
+            }
+            folder = self.service.files().create(body=file_metadata, fields='id').execute()
+            folder_id = folder['id']
+            logger.info(f"Created folder: {folder_name}")
+        
+        self.folder_cache[cache_key] = folder_id
+        return folder_id
+    
+    def _build_folder_path(self, form_type: str, date: datetime) -> str:
+        """Build folder path and return the final folder ID"""
+        year = str(date.year)
+        month = str(date.month).zfill(2)
+        
+        # Get or create form type folder (Catching, Surgery, etc.)
+        form_folder_id = self._get_or_create_folder(form_type, self.root_folder_id)
+        
+        # Get or create year folder
+        year_folder_id = self._get_or_create_folder(year, form_folder_id)
+        
+        # Get or create month folder
+        month_folder_id = self._get_or_create_folder(month, year_folder_id)
+        
+        return month_folder_id
+    
+    def _get_photo_subfolder(self, month_folder_id: str, photo_index: int) -> str:
+        """Get or create a/b/c/d subfolder based on photo index"""
+        subfolder_names = ['a', 'b', 'c', 'd']
+        subfolder_name = subfolder_names[min(photo_index, 3)]
+        return self._get_or_create_folder(subfolder_name, month_folder_id)
+    
+    def _extract_case_suffix(self, case_number: str) -> str:
+        """Extract last 4 digits from case number"""
+        # Case number format: JSAWT-TAL-JAN-0012 -> 0012
+        parts = case_number.split('-')
+        if parts:
+            return parts[-1].zfill(4)
+        return "0000"
+    
+    def _generate_filename(self, form_type: str, case_number: str, date: datetime, photo_index: int) -> str:
+        """Generate filename based on form type and conventions"""
+        date_str = date.strftime("%d-%m-%y")
+        photo_suffix = ['a', 'b', 'c', 'd'][min(photo_index, 3)]
+        
+        if form_type in ['Catching', 'Surgery', 'Release']:
+            # Format: DD-MM-YY-XXXX.jpg
+            case_suffix = self._extract_case_suffix(case_number)
+            return f"{date_str}-{case_suffix}.jpg"
+        else:
+            # Format for Feeding and Post-op-care: CASENUMBER-DD-MM-YY-a.jpg
+            return f"{case_number}-{date_str}-{photo_suffix}.jpg"
+    
+    def upload_image(
+        self,
+        base64_data: str,
+        form_type: str,
+        case_number: str,
+        date: datetime = None,
+        photo_index: int = 0
+    ) -> Optional[Dict]:
+        """
+        Upload an image to Google Drive with proper folder structure
+        
+        Args:
+            base64_data: Base64 encoded image
+            form_type: One of 'Catching', 'Surgery', 'Release', 'Feeding', 'Post-op-care', 'Config-files'
+            case_number: Case number (e.g., JSAWT-TAL-JAN-0012)
+            date: Date for the photo (defaults to now)
+            photo_index: 0=a, 1=b, 2=c, 3=d
+            
+        Returns:
+            Dict with file_id, direct_link, filename, folder_path
+        """
+        if not self.service:
+            logger.error("Google Drive service not initialized")
+            return None
+        
+        try:
+            date = date or datetime.now()
+            
+            # Handle Config-files separately
+            if form_type == 'Config-files':
+                folder_id = self._get_or_create_folder('Config-files', self.root_folder_id)
+                filename = f"{case_number}.jpg"  # case_number here is actually the config file name
+            else:
+                # Build folder path: FormType/Year/Month
+                month_folder_id = self._build_folder_path(form_type, date)
+                
+                # Get a/b/c/d subfolder
+                folder_id = self._get_photo_subfolder(month_folder_id, photo_index)
+                
+                # Generate filename
+                filename = self._generate_filename(form_type, case_number, date, photo_index)
+            
+            # Remove data URL prefix if present
+            if ',' in base64_data:
+                base64_data = base64_data.split(',')[1]
+            
+            # Decode base64 to bytes
+            image_bytes = base64.b64decode(base64_data)
+            
+            # Determine MIME type
+            mime_type = 'image/jpeg'
+            if filename.lower().endswith('.png'):
+                mime_type = 'image/png'
+            
+            # Check if file already exists (to overwrite)
+            query = f"name='{filename}' and '{folder_id}' in parents and trashed=false"
+            existing = self.service.files().list(q=query, fields="files(id)").execute()
+            existing_files = existing.get('files', [])
+            
+            if existing_files:
+                # Delete existing file
+                self.service.files().delete(fileId=existing_files[0]['id']).execute()
+                logger.info(f"Deleted existing file: {filename}")
+            
+            # Create file metadata
+            file_metadata = {
+                'name': filename,
+                'parents': [folder_id]
+            }
+            
+            # Create media upload
+            media = MediaIoBaseUpload(
+                io.BytesIO(image_bytes),
+                mimetype=mime_type,
+                resumable=True
+            )
+            
+            # Upload file
+            file = self.service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id, name, webViewLink'
+            ).execute()
+            
+            # Make file publicly viewable
+            self.service.permissions().create(
+                fileId=file['id'],
+                body={'type': 'anyone', 'role': 'reader'}
+            ).execute()
+            
+            logger.info(f"Uploaded: {form_type}/{date.year}/{str(date.month).zfill(2)}/{['a','b','c','d'][photo_index]}/{filename}")
+            
+            return {
+                'file_id': file['id'],
+                'filename': filename,
+                'direct_link': f"https://drive.google.com/uc?id={file['id']}",
+                'web_view_link': file.get('webViewLink'),
+                'folder_path': f"{form_type}/{date.year}/{str(date.month).zfill(2)}/{['a','b','c','d'][photo_index]}"
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to upload image: {str(e)}")
+            return None
+    
+    def upload_multiple_images(
+        self,
+        images: List[str],
+        form_type: str,
+        case_number: str,
+        date: datetime = None
+    ) -> List[Optional[Dict]]:
+        """Upload multiple images (up to 4)"""
+        results = []
+        for i, base64_data in enumerate(images[:4]):
+            if base64_data:
+                result = self.upload_image(base64_data, form_type, case_number, date, i)
+                results.append(result)
+            else:
+                results.append(None)
+        return results
+    
+    def get_updated_credentials(self) -> dict:
+        """Return updated credentials if they were refreshed"""
+        return self.creds_data
+
+
+async def get_drive_uploader(db) -> Optional[DriveUploader]:
+    """Get DriveUploader instance with credentials from database"""
+    # Try to get system credentials
+    creds = await db.drive_credentials.find_one({"user_id": "system"}, {"_id": 0})
+    if not creds:
+        # Try any available credentials
+        creds = await db.drive_credentials.find_one({}, {"_id": 0})
+    
+    if not creds:
+        logger.warning("No Google Drive credentials found")
+        return None
+    
+    root_folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
+    if not root_folder_id:
+        logger.warning("GOOGLE_DRIVE_FOLDER_ID not set")
+        return None
+    
+    return DriveUploader(creds, root_folder_id)
