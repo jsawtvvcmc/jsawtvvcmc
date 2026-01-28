@@ -1225,7 +1225,12 @@ async def bulk_upload_catching(
     
     try:
         contents = await file.read()
-        df = pd.read_excel(BytesIO(contents), skiprows=1)  # Skip hint row
+        df = pd.read_excel(BytesIO(contents), header=0)  # Read with header row
+        
+        # Skip the hint row (second row, index 0 after header)
+        if len(df) > 0 and str(df.iloc[0, 0]).startswith('E.g'):
+            df = df.iloc[1:]  # Skip hint row
+            df = df.reset_index(drop=True)
         
         # Normalize column names
         df.columns = df.columns.str.strip().str.lower().str.replace('*', '', regex=False)
