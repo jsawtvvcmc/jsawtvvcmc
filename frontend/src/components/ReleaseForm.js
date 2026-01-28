@@ -78,16 +78,17 @@ const ReleaseForm = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      await axios.post(`${API}/cases/${formData.case_id}/release`, {
+      const response = await axios.post(`${API}/cases/${formData.case_id}/release`, {
         location_lat: parseFloat(formData.location_lat),
         location_lng: parseFloat(formData.location_lng),
         address: formData.address,
-        photo_base64: formData.photo_base64,
+        photos: formData.photos.filter(p => p),
         remarks: formData.remarks || null
       }, { headers: { Authorization: `Bearer ${token}` } });
       
-      setMessage({ type: 'success', text: 'Animal released successfully!' });
-      setFormData({ case_id: '', location_lat: '', location_lng: '', address: '', photo_base64: '', remarks: '' });
+      const photosUploaded = response.data.photos_uploaded || 0;
+      setMessage({ type: 'success', text: `Animal released successfully! ${photosUploaded} photo(s) uploaded to Drive.` });
+      setFormData({ case_id: '', location_lat: '', location_lng: '', address: '', photos: ['', '', '', ''], remarks: '' });
       fetchReadyCases();
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed' });
