@@ -66,6 +66,73 @@ class Gender(str, Enum):
     MALE = "Male"
     FEMALE = "Female"
 
+class CancellationReason(str, Enum):
+    TOO_WEAK = "Too weak"
+    UNDER_AGE = "Under age"
+    LOOKS_ILL = "Looks ill"
+    CONTAGIOUS_DISEASE = "Shows symptoms of highly contagious disease"
+    ALREADY_STERILIZED = "Already sterilized"
+    ADVANCED_PREGNANT = "Advanced pregnant"
+    LACTATING = "Lactating"
+    OTHER = "Other"
+
+# Medicine Protocol - Standard dosages based on weight (per 10kg baseline)
+MEDICINE_PROTOCOL = {
+    "Anti-Rabies Vaccine": {"base_dose": 1, "unit": "Ml", "fixed": True},
+    "Xylazine": {"base_dose": 1, "unit": "Ml", "per_10kg": True},
+    "Melonex": {"base_dose": 0.8, "unit": "Ml", "per_10kg": True, "max": 1},
+    "Atropine": {"base_dose": 1, "unit": "Ml", "per_10kg": True, "round_half": True},
+    "Diazepam": {"base_dose": 0, "unit": "Ml", "per_10kg": True},
+    "Prednisolone": {"base_dose": 0, "unit": "Ml", "per_10kg": True},
+    "Ketamine": {"base_dose": 3, "unit": "Ml", "per_10kg": True, "round_half": True},
+    "Tribivet": {"base_dose": 1, "unit": "Ml", "fixed": True},
+    "Intacef Tazo": {"base_dose": 400, "unit": "Mg", "per_10kg": True, "round_50": True},
+    "Adrenaline": {"base_dose": 0, "unit": "Ml", "per_10kg": True},
+    "Alu Spray": {"base_dose": 2, "unit": "Ml", "per_10kg": True, "round_half": True},
+    "Ethamsylate": {"base_dose": 1, "unit": "Ml", "per_10kg": True, "round_half": True},
+    "Tincture": {"base_dose": 20, "unit": "Ml", "per_10kg": True, "round_5": True},
+    "Avil": {"base_dose": 1, "unit": "Ml", "fixed": True},
+    "Vicryl 1": {"base_dose": 0.20, "unit": "Pcs", "fixed": True},
+    "Catgut": {"base_dose": 0.20, "unit": "Pcs", "fixed": True},
+    "Vicryl 2": {"base_dose": 0.20, "unit": "Pcs", "female_only": True},
+    "Metronidazole": {"base_dose": 50, "unit": "Ml", "fixed": True},
+}
+
+def calculate_medicine_dosage(weight: float, medicine_name: str, gender: str = None) -> float:
+    """Calculate medicine dosage based on weight and protocol"""
+    if medicine_name not in MEDICINE_PROTOCOL:
+        return 0
+    
+    protocol = MEDICINE_PROTOCOL[medicine_name]
+    
+    # Check female-only medicines
+    if protocol.get("female_only") and gender != "Female":
+        return 0
+    
+    base = protocol["base_dose"]
+    
+    if protocol.get("fixed"):
+        return base
+    
+    if protocol.get("per_10kg"):
+        dose = base * weight / 10
+        
+        # Apply max limit
+        if protocol.get("max"):
+            dose = min(dose, protocol["max"])
+        
+        # Apply rounding
+        if protocol.get("round_half"):
+            dose = round(dose * 2) / 2
+        elif protocol.get("round_50"):
+            dose = round(dose / 50) * 50
+        elif protocol.get("round_5"):
+            dose = round(dose / 5) * 5
+        
+        return dose
+    
+    return base
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
