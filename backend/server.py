@@ -897,6 +897,29 @@ async def create_daily_feeding(
     current_user: dict = Depends(get_current_user)
 ):
     """Create daily feeding record"""
+    
+    # Upload photos to Google Drive (Feeding)
+    photo_links = []
+    drive_uploader = await get_drive_uploader(db)
+    
+    if drive_uploader and data.get("photos"):
+        feeding_date = datetime.fromisoformat(data.get("date", datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')) if data.get("date") else datetime.now(timezone.utc)
+        
+        # For feeding, we use a combined identifier since it's not case-specific
+        feeding_id = f"FEED-{feeding_date.strftime('%d%m%y')}-{data['meal_time']}"
+        
+        for i, photo in enumerate(data.get("photos", [])[:4]):
+            if photo:
+                result = drive_uploader.upload_image(
+                    base64_data=photo,
+                    form_type="Feeding",
+                    case_number=feeding_id,
+                    date=feeding_date,
+                    photo_index=i
+                )
+                if result:
+                    photo_links.append(result)
+    
     feeding = {
         "id": str(uuid.uuid4()),
         "date": data.get("date", datetime.now(timezone.utc).isoformat()),
@@ -904,7 +927,8 @@ async def create_daily_feeding(
         "kennel_numbers": data["kennel_numbers"],
         "food_items": data["food_items"],
         "total_quantity": data["total_quantity"],
-        "photo_base64": data["photo_base64"],
+        "photo_links": photo_links,
+        "photo_base64": data.get("photo_base64") if not photo_links else None,
         "animals_not_fed": data.get("animals_not_fed", []),
         "remarks": data.get("remarks"),
         "caretaker_id": current_user["id"]
@@ -928,7 +952,7 @@ async def create_daily_feeding(
                 {"$push": {"daily_feedings": feeding["id"]}}
             )
     
-    return {"message": "Feeding record created successfully", "feeding_id": feeding["id"]}
+    return {"message": "Feeding record created successfully", "feeding_id": feeding["id"], "photos_uploaded": len(photo_links)}
 
 @api_router.post("/cases/{case_id}/release")
 async def add_release_record(
