@@ -33,6 +33,7 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 - [x] Dashboard with overview statistics
 - [x] 300 kennels initialized in database
 - [x] **18 Default Medicines initialized** (Jan 28, 2026) - All surgery medicines pre-loaded
+- [x] **Google Drive Integration** (Jan 28, 2026) - OAuth-based image storage with folder hierarchy
 
 ### Forms & Workflows ✅
 - [x] **Catching Form** - GPS extraction from photo EXIF data, photo upload with camera option
