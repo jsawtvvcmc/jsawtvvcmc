@@ -104,7 +104,7 @@ const DailyTreatment = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      await axios.post(`${API}/cases/${formData.case_id}/treatment`, {
+      const response = await axios.post(`${API}/cases/${formData.case_id}/treatment`, {
         day_post_surgery: parseInt(formData.day_post_surgery),
         antibiotic_id: formData.antibiotic_id || null,
         antibiotic_dosage: formData.antibiotic_dosage ? parseFloat(formData.antibiotic_dosage) : null,
@@ -113,13 +113,14 @@ const DailyTreatment = () => {
         additional_medicine_id: formData.additional_medicine_id || null,
         additional_medicine_dosage: formData.additional_medicine_dosage ? parseFloat(formData.additional_medicine_dosage) : null,
         wound_condition: formData.wound_condition,
-        photo_base64: formData.photo_base64,
+        photos: formData.photos.filter(p => p),
         remarks: formData.remarks || null
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setMessage({ type: 'success', text: 'Treatment record added successfully!' });
+      const photosUploaded = response.data.photos_uploaded || 0;
+      setMessage({ type: 'success', text: `Treatment record added successfully! ${photosUploaded} photo(s) uploaded to Drive.` });
       setFormData({
         case_id: '',
         day_post_surgery: 1,
@@ -130,7 +131,7 @@ const DailyTreatment = () => {
         additional_medicine_id: '',
         additional_medicine_dosage: '',
         wound_condition: 'Normal Healing',
-        photo_base64: '',
+        photos: ['', '', '', ''],
         remarks: ''
       });
       setSelectedCase(null);
