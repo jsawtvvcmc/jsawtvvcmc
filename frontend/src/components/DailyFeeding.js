@@ -141,10 +141,22 @@ const DailyFeeding = () => {
                 </div>
               ))}
             </div>
-            <div>
-              <Label>Photo *</Label>
-              <Input type="file" accept="image/*" capture="environment" onChange={handlePhotoCapture} required />
-              {photo && <img src={photo} alt="Feeding" className="mt-2 max-w-xs rounded" />}
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <Label className="text-lg font-semibold">📸 Feeding Photos (4 max, first required)</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                {[0, 1, 2, 3].map((index) => (
+                  <div key={index} className="space-y-2">
+                    <Label className="text-sm">Photo {index + 1} {index === 0 ? '*' : '(optional)'}</Label>
+                    <Input type="file" accept="image/*" capture="environment" onChange={(e) => handlePhotoCapture(e, index)} required={index === 0} className="text-xs" />
+                    {photos[index] && (
+                      <div className="relative">
+                        <img src={photos[index]} alt={`Photo ${index + 1}`} className="w-full h-24 object-cover rounded border-2 border-green-500" />
+                        <button type="button" onClick={() => removePhoto(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs">✕</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
             <Button type="submit" disabled={loading || selectedKennels.length === 0} className="w-full bg-green-600 hover:bg-green-700">
               {loading ? 'Saving...' : '✓ Save Feeding Record'}
