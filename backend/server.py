@@ -965,12 +965,36 @@ async def add_release_record(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     
+    # Upload photos to Google Drive (Release)
+    photo_links = []
+    drive_uploader = await get_drive_uploader(db)
+    
+    if drive_uploader:
+        photos = data.get("photos", [])
+        if not photos and data.get("photo_base64"):
+            photos = [data["photo_base64"]]
+        
+        release_date = datetime.fromisoformat(data.get("date_time", datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')) if data.get("date_time") else datetime.now(timezone.utc)
+        
+        for i, photo in enumerate(photos[:4]):
+            if photo:
+                result = drive_uploader.upload_image(
+                    base64_data=photo,
+                    form_type="Release",
+                    case_number=case["case_number"],
+                    date=release_date,
+                    photo_index=i
+                )
+                if result:
+                    photo_links.append(result)
+    
     release = {
         "date_time": data.get("date_time", datetime.now(timezone.utc).isoformat()),
         "location_lat": data["location_lat"],
         "location_lng": data["location_lng"],
         "address": data["address"],
-        "photo_base64": data["photo_base64"],
+        "photo_links": photo_links,
+        "photo_base64": data.get("photo_base64") if not photo_links else None,
         "released_by": current_user["id"],
         "remarks": data.get("remarks")
     }
@@ -1000,7 +1024,7 @@ async def add_release_record(
             }
         )
     
-    return {"message": "Release record added successfully"}
+    return {"message": "Release record added successfully", "photos_uploaded": len(photo_links)}
 
 # Include the router in the main app
 app.include_router(api_router)
