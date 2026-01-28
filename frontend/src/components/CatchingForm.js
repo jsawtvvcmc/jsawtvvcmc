@@ -167,8 +167,8 @@ const CatchingForm = () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
 
-    if (!formData.photo_base64) {
-      setMessage({ type: 'error', text: 'Please capture a photo' });
+    if (!formData.photos[0]) {
+      setMessage({ type: 'error', text: 'Please capture at least one photo (Photo 1 is required)' });
       setLoading(false);
       return;
     }
@@ -179,14 +179,15 @@ const CatchingForm = () => {
         location_lng: parseFloat(formData.location_lng),
         address: formData.address,
         ward_number: formData.ward_number || null,
-        photo_base64: formData.photo_base64,
+        photos: formData.photos.filter(p => p),  // Send only non-empty photos
         remarks: formData.remarks || null
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       setCaseNumber(response.data.case_number);
-      setMessage({ type: 'success', text: `Case created successfully! Case Number: ${response.data.case_number}` });
+      const photosUploaded = response.data.photos_uploaded || 0;
+      setMessage({ type: 'success', text: `Case created successfully! Case Number: ${response.data.case_number}. ${photosUploaded} photo(s) uploaded to Google Drive.` });
       setFormData({
         location_lat: '',
         location_lng: '',
