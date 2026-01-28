@@ -276,7 +276,7 @@ const BulkUpload = () => {
           </div>
           <div className="p-3 bg-yellow-50 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> For surgery records, medicine stock will be automatically calculated and deducted based on the animal's weight and gender using standard protocols.
+              <strong>Note:</strong> For surgery records, medicine stock will be automatically calculated and deducted based on the animal&apos;s weight and gender using standard protocols.
             </p>
           </div>
         </CardContent>
