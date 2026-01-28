@@ -238,32 +238,50 @@ const CatchingForm = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Photo Upload - First */}
+            {/* Photo Upload - Multiple Photos */}
             <div className="p-4 bg-yellow-50 rounded-lg">
-              <Label htmlFor="photo">📸 Photo of Animal * (with GPS enabled)</Label>
-              <p className="text-xs text-gray-600 mb-2">
-                📍 Ensure location/GPS is enabled in your camera settings before taking photo
+              <Label className="text-lg font-semibold">📸 Photos of Animal (4 max, first required)</Label>
+              <p className="text-xs text-gray-600 mb-3">
+                📍 Photo 1 is required and will be used to extract GPS. Enable location in camera settings.
               </p>
-              <Input
-                id="photo"
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handlePhotoCapture}
-                required
-                data-testid="photo-input"
-              />
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[0, 1, 2, 3].map((index) => (
+                  <div key={index} className="space-y-2">
+                    <Label className="text-sm">
+                      Photo {index + 1} {index === 0 ? '*' : '(optional)'}
+                    </Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => handlePhotoCapture(e, index)}
+                      required={index === 0}
+                      data-testid={`photo-input-${index}`}
+                      className="text-xs"
+                    />
+                    {formData.photos[index] && (
+                      <div className="relative">
+                        <img 
+                          src={formData.photos[index]} 
+                          alt={`Photo ${index + 1}`} 
+                          className="w-full h-24 object-cover rounded border-2 border-green-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
               {extractingGPS && (
                 <p className="text-sm text-blue-600 mt-2">🔄 Extracting GPS from photo...</p>
-              )}
-              {formData.photo_base64 && (
-                <div className="mt-2">
-                  <img 
-                    src={formData.photo_base64} 
-                    alt="Captured animal" 
-                    className="max-w-xs rounded-lg border-2 border-green-500"
-                  />
-                </div>
               )}
             </div>
 
