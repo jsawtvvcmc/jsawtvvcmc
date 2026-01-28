@@ -91,7 +91,7 @@ const DailyFeeding = () => {
       setMessage({ type: 'success', text: `Feeding record created successfully! ${photosUploaded} photo(s) uploaded to Drive.` });
       setSelectedKennels([]);
       setSelectedFood({});
-      setPhoto('');
+      setPhotos(['', '', '', '']);
       fetchFoodItems();
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed' });
