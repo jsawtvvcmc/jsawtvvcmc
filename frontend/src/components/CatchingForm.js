@@ -371,16 +371,25 @@ const CatchingForm = () => {
 
             {/* Address */}
             <div>
-              <Label htmlFor="address">Address *</Label>
+              <div className="flex justify-between items-center mb-1">
+                <Label htmlFor="address">Address *</Label>
+                {fetchingAddress && (
+                  <span className="text-xs text-blue-600">🔄 Auto-detecting address...</span>
+                )}
+              </div>
               <Textarea
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
-                placeholder="Enter complete address where animal was caught"
+                placeholder="Address will be auto-detected from GPS, or enter manually"
                 required
                 rows={3}
                 data-testid="address-input"
+                className={fetchingAddress ? 'bg-blue-50' : ''}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Address is automatically fetched from GPS coordinates using OpenStreetMap
+              </p>
             </div>
 
             {/* Ward Number */}
