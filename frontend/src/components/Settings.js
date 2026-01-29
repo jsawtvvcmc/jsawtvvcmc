@@ -451,9 +451,40 @@ const Settings = () => {
                 </p>
               </div>
 
+              {/* Google Maps API Key */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335"/>
+                    <circle cx="12" cy="9" r="2.5" fill="white"/>
+                  </svg>
+                  Google Maps API (for Address Detection)
+                </h4>
+                <p className="text-sm text-blue-700 mb-3">
+                  Enter your Google Maps API key to enable accurate address detection from GPS coordinates.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="google_maps_api_key">Google Maps API Key</Label>
+                  <Input
+                    id="google_maps_api_key"
+                    type="password"
+                    value={config.google_maps_api_key || ''}
+                    onChange={(e) => handleConfigChange('google_maps_api_key', e.target.value)}
+                    placeholder="Enter your Google Maps API key"
+                    data-testid="input-google-maps-key"
+                  />
+                  <p className="text-xs text-blue-600">
+                    {config.google_maps_api_key ? '✅ API key configured - using Google Maps for geocoding' : '⚠️ No API key - using OpenStreetMap (free but less accurate)'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Get your API key from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Google Cloud Console</a>. 
+                    Enable the &quot;Geocoding API&quot; for your project.
+                  </p>
+                </div>
+              </div>
+
               <div className="text-sm text-gray-500">
                 <p><strong>Note:</strong> All photos from forms will be uploaded to the connected Google Drive account.</p>
-                <p className="mt-2">OneDrive integration coming soon.</p>
               </div>
             </CardContent>
           </Card>
