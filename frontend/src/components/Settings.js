@@ -176,7 +176,7 @@ const Settings = () => {
             Project
           </TabsTrigger>
           <TabsTrigger value="cloud" data-testid="tab-cloud">
-            <FolderCloud className="w-4 h-4 mr-2" />
+            <Cloud className="w-4 h-4 mr-2" />
             Cloud Storage
           </TabsTrigger>
         </TabsList>
