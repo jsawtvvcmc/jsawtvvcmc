@@ -20,12 +20,14 @@ const InitialObservations = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   
+  const COLOR_OPTIONS = ['Black', 'White', 'Dark Brown', 'Light Brown', 'Grey', 'Fawn'];
+  
   const [formData, setFormData] = useState({
     case_id: '',
     kennel_number: '',
     gender: 'Male',
     approximate_age: 'Adult 2-8 years',
-    color_markings: '',
+    selected_colors: [],
     body_condition: 'Normal',
     temperament: 'Calm',
     visible_injuries: false,
@@ -33,6 +35,15 @@ const InitialObservations = () => {
     photo_base64: '',
     remarks: ''
   });
+
+  const handleColorToggle = (color) => {
+    setFormData(prev => {
+      const colors = prev.selected_colors.includes(color)
+        ? prev.selected_colors.filter(c => c !== color)
+        : [...prev.selected_colors, color];
+      return { ...prev, selected_colors: colors };
+    });
+  };
 
   useEffect(() => {
     fetchCaughtCases();
