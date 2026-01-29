@@ -326,14 +326,106 @@ async def get_system_config():
     if not config:
         return {
             "id": "system_config",
-            "organization_name": "Janice's Trust",
-            "registered_office": "A hilltop haven for animals",
-            "project_name": "ABC Program",
-            "project_code": "JAPP",
-            "project_address": "",
-            "max_kennels": 300
+            "organization_name": "Janice Smith Animal Welfare Trust",
+            "organization_shortcode": "JS",
+            "registered_office": "352, Vadgaon, Yashwant Nagar, Talegaon Dabhade, Maharashtra 410507",
+            "organization_logo": None,
+            "project_name": "Talegaon ABC Project",
+            "project_code": "TAL",
+            "municipal_logo": None,
+            "project_address": "352, Vadgaon, Yashwant Nagar, Talegaon Dabhade, Maharashtra 410507, India",
+            "max_kennels": 300,
+            "cloud_provider": "google_drive"
         }
     return config
+
+@api_router.put("/config")
+async def update_system_config(
+    config_data: dict,
+    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+):
+    """Update system configuration"""
+    # Fields that can be updated
+    allowed_fields = [
+        "organization_name", "organization_shortcode", "registered_office",
+        "organization_logo", "project_name", "project_code", "municipal_logo",
+        "project_address", "max_kennels", "cloud_provider"
+    ]
+    
+    update_data = {k: v for k, v in config_data.items() if k in allowed_fields}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    # Validate max_kennels
+    if "max_kennels" in update_data:
+        max_kennels = update_data["max_kennels"]
+        if not isinstance(max_kennels, int) or max_kennels < 1 or max_kennels > 300:
+            raise HTTPException(status_code=400, detail="max_kennels must be between 1 and 300")
+        
+        # Update kennels collection if max_kennels changed
+        current_config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+        current_max = current_config.get("max_kennels", 300) if current_config else 300
+        
+        if max_kennels != current_max:
+            # Remove extra kennels if reducing
+            if max_kennels < current_max:
+                await db.kennels.delete_many({"kennel_number": {"$gt": max_kennels}})
+            # Add new kennels if increasing
+            elif max_kennels > current_max:
+                for i in range(current_max + 1, max_kennels + 1):
+                    existing = await db.kennels.find_one({"kennel_number": i})
+                    if not existing:
+                        await db.kennels.insert_one({
+                            "id": str(uuid.uuid4()),
+                            "kennel_number": i,
+                            "is_occupied": False,
+                            "current_case_id": None,
+                            "last_updated": datetime.now(timezone.utc).isoformat()
+                        })
+    
+    # Validate shortcodes (uppercase, 2-5 chars)
+    if "organization_shortcode" in update_data:
+        shortcode = update_data["organization_shortcode"].upper()
+        if len(shortcode) < 2 or len(shortcode) > 5:
+            raise HTTPException(status_code=400, detail="Organization shortcode must be 2-5 characters")
+        update_data["organization_shortcode"] = shortcode
+    
+    if "project_code" in update_data:
+        project_code = update_data["project_code"].upper()
+        if len(project_code) < 2 or len(project_code) > 5:
+            raise HTTPException(status_code=400, detail="Project code must be 2-5 characters")
+        update_data["project_code"] = project_code
+    
+    await db.system_config.update_one(
+        {"id": "system_config"},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    return {"message": "Configuration updated successfully"}
+
+@api_router.post("/config/logo/{logo_type}")
+async def upload_logo(
+    logo_type: str,
+    data: dict,
+    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+):
+    """Upload organization or municipal logo (base64)"""
+    if logo_type not in ["organization", "municipal"]:
+        raise HTTPException(status_code=400, detail="logo_type must be 'organization' or 'municipal'")
+    
+    logo_data = data.get("logo_base64")
+    if not logo_data:
+        raise HTTPException(status_code=400, detail="logo_base64 is required")
+    
+    field_name = f"{logo_type}_logo"
+    
+    await db.system_config.update_one(
+        {"id": "system_config"},
+        {"$set": {field_name: logo_data, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    
+    return {"message": f"{logo_type.capitalize()} logo uploaded successfully"}
 
 # Basic route
 @api_router.get("/")
