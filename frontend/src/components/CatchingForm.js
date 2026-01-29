@@ -145,13 +145,18 @@ const CatchingForm = () => {
     if (navigator.geolocation) {
       setMessage({ type: 'info', text: 'Getting your location...' });
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData({
-            ...formData,
-            location_lat: position.coords.latitude,
-            location_lng: position.coords.longitude
-          });
-          setMessage({ type: 'success', text: 'Location captured successfully!' });
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          setFormData(prev => ({
+            ...prev,
+            location_lat: lat,
+            location_lng: lng
+          }));
+          
+          // Auto-fetch address from coordinates
+          await fetchAddressFromCoordinates(lat, lng);
         },
         (error) => {
           setMessage({ type: 'error', text: 'Unable to get location. Please enter manually.' });
