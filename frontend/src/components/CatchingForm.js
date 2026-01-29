@@ -17,6 +17,7 @@ const CatchingForm = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [caseNumber, setCaseNumber] = useState('');
   const [extractingGPS, setExtractingGPS] = useState(false);
+  const [fetchingAddress, setFetchingAddress] = useState(false);
   
   const [formData, setFormData] = useState({
     location_lat: '',
@@ -27,6 +28,32 @@ const CatchingForm = () => {
     remarks: ''
   });
 
+  // Auto-fetch address when coordinates change
+  const fetchAddressFromCoordinates = async (lat, lng) => {
+    if (!lat || !lng) return;
+    
+    setFetchingAddress(true);
+    try {
+      const response = await axios.get(`${API}/geocode/reverse`, {
+        params: { lat, lng },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success && response.data.address) {
+        setFormData(prev => ({
+          ...prev,
+          address: response.data.address
+        }));
+        setMessage({ type: 'success', text: 'GPS and address auto-detected from photo!' });
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+      // Don't show error - address can still be entered manually
+    } finally {
+      setFetchingAddress(false);
+    }
+  };
+
   const extractGPSFromImage = async (file) => {
     setExtractingGPS(true);
     setMessage({ type: '', text: '' });
@@ -36,7 +63,7 @@ const CatchingForm = () => {
       const EXIF = window.EXIF;
       
       if (EXIF) {
-        EXIF.getData(file, function() {
+        EXIF.getData(file, async function() {
           const lat = EXIF.getTag(this, "GPSLatitude");
           const latRef = EXIF.getTag(this, "GPSLatitudeRef");
           const lon = EXIF.getTag(this, "GPSLongitude");
@@ -52,19 +79,22 @@ const CatchingForm = () => {
               location_lat: latDecimal,
               location_lng: lonDecimal
             }));
-            setMessage({ type: 'success', text: 'GPS coordinates extracted from photo!' });
+            
+            // Auto-fetch address from coordinates
+            await fetchAddressFromCoordinates(latDecimal, lonDecimal);
           } else {
             setMessage({ type: 'error', text: 'No GPS data found in photo. Please enable location in camera settings.' });
           }
+          setExtractingGPS(false);
         });
       } else {
         // Fallback: Try to read EXIF using FileReader
         await extractGPSFallback(file);
+        setExtractingGPS(false);
       }
     } catch (error) {
       console.error('Error extracting GPS:', error);
       setMessage({ type: 'error', text: 'Could not extract GPS from photo. Please enter manually.' });
-    } finally {
       setExtractingGPS(false);
     }
   };
