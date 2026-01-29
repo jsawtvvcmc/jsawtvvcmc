@@ -756,8 +756,9 @@ async def create_catching_record(
     from utils import get_next_case_number
     
     config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
-    project_code = config.get("project_code", "JAPP") if config else "JAPP"
-    case_number = await get_next_case_number(db, project_code)
+    org_shortcode = config.get("organization_shortcode", "JS") if config else "JS"
+    project_code = config.get("project_code", "TAL") if config else "TAL"
+    case_number = await get_next_case_number(db, org_shortcode, project_code)
     
     # Upload photos to Google Drive
     photo_links = []
