@@ -7,7 +7,7 @@ import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import axios from 'axios';
-import { Settings as SettingsIcon, Building2, FolderCloud, Save, Upload, Image } from 'lucide-react';
+import { Settings as SettingsIcon, Building2, Cloud, Save, Upload, Image } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
