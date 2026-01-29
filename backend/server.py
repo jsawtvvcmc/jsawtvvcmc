@@ -1334,9 +1334,10 @@ async def bulk_upload_catching(
         
         results = {"success": 0, "failed": 0, "errors": []}
         
-        # Get project code
+        # Get project codes
         config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
-        project_code = config.get("project_code", "JAPP") if config else "JAPP"
+        org_shortcode = config.get("organization_shortcode", "JS") if config else "JS"
+        project_code = config.get("project_code", "TAL") if config else "TAL"
         
         for idx, row in df.iterrows():
             row_num = idx + 3  # Account for header and hint rows
