@@ -5,32 +5,36 @@ from datetime import datetime
 from typing import Dict
 import calendar
 
-def generate_case_number(project_code: str, month: int, sequence: int) -> str:
+def generate_case_number(org_shortcode: str, project_code: str, month: int, sequence: int) -> str:
     """
-    Generate case number in format: JS/[PROJECT-CODE]/[MONTH]-[SEQUENCE]
-    Example: JS/TAL/JAN-0001
+    Generate case number in format: [ORG_SHORT]-[PROJECT_CODE]-[MONTH]-[SEQUENCE]
+    Example: JS-TAL-JAN-0001 (JS for Janice Smith, TAL for Talegaon)
     """
-    month_abbr = calendar.month_abbr[month].upper()
-    return f"JS/{project_code}/{month_abbr}-{sequence:04d}"
+    month_abbr = calendar.month_abbr[month].upper()[:3]
+    return f"{org_shortcode}-{project_code}-{month_abbr}-{sequence:04d}"
 
 def get_current_month_abbr() -> str:
     """Get current month abbreviation (JAN, FEB, etc.)"""
-    return calendar.month_abbr[datetime.now().month].upper()
+    return calendar.month_abbr[datetime.now().month].upper()[:3]
 
-async def get_next_case_number(db, project_code: str) -> str:
+async def get_next_case_number(db, org_shortcode: str = "JS", project_code: str = "TAL") -> str:
     """
     Get the next case number for the current month
     Resets sequence at the start of each month
+    
+    Format: JS-TAL-JAN-0001
     """
     current_month = datetime.now().month
     current_year = datetime.now().year
     month_abbr = get_current_month_abbr()
     
+    # Pattern to match: JS-TAL-JAN-
+    pattern = f"^{org_shortcode}-{project_code}-{month_abbr}-"
+    
     # Find the highest sequence number for current month
-    pattern = f"JS/{project_code}/{month_abbr}-"
     cases = await db.cases.find(
         {
-            "case_number": {"$regex": f"^{pattern}"},
+            "case_number": {"$regex": pattern},
             "created_at": {
                 "$gte": datetime(current_year, current_month, 1).isoformat()
             }
@@ -52,7 +56,7 @@ async def get_next_case_number(db, project_code: str) -> str:
         
         sequence = max(sequences) + 1 if sequences else 1
     
-    return generate_case_number(project_code, current_month, sequence)
+    return generate_case_number(org_shortcode, project_code, current_month, sequence)
 
 def generate_password(first_name: str, mobile: str) -> str:
     """
