@@ -433,6 +433,78 @@ async def upload_logo(
 async def root():
     return {"message": "ABC Program Management System API", "version": "1.0"}
 
+# ==================== GEOCODING ====================
+
+@api_router.get("/geocode/reverse")
+async def reverse_geocode(
+    lat: float,
+    lng: float,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Convert latitude/longitude to address using free Nominatim API (OpenStreetMap)
+    Falls back to basic coordinates if no address found
+    """
+    try:
+        # Use Nominatim (OpenStreetMap) for free reverse geocoding
+        url = f"https://nominatim.openstreetmap.org/reverse"
+        params = {
+            "lat": lat,
+            "lon": lng,
+            "format": "json",
+            "addressdetails": 1
+        }
+        headers = {
+            "User-Agent": "J-APP-ABC-Program/1.0"  # Required by Nominatim
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, headers=headers, timeout=10.0)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if "display_name" in data:
+                    address = data["display_name"]
+                    
+                    # Extract structured address parts if available
+                    addr_parts = data.get("address", {})
+                    
+                    return {
+                        "success": True,
+                        "address": address,
+                        "formatted_address": address,
+                        "components": {
+                            "road": addr_parts.get("road", ""),
+                            "suburb": addr_parts.get("suburb", ""),
+                            "city": addr_parts.get("city", addr_parts.get("town", addr_parts.get("village", ""))),
+                            "state": addr_parts.get("state", ""),
+                            "postcode": addr_parts.get("postcode", ""),
+                            "country": addr_parts.get("country", "")
+                        },
+                        "lat": lat,
+                        "lng": lng
+                    }
+        
+        # Fallback if no address found
+        return {
+            "success": False,
+            "address": f"Location: {lat:.6f}, {lng:.6f}",
+            "lat": lat,
+            "lng": lng,
+            "error": "Could not find address for these coordinates"
+        }
+        
+    except Exception as e:
+        logger.error(f"Reverse geocoding error: {str(e)}")
+        return {
+            "success": False,
+            "address": f"Location: {lat:.6f}, {lng:.6f}",
+            "lat": lat,
+            "lng": lng,
+            "error": str(e)
+        }
+
 # ==================== GOOGLE DRIVE OAUTH ====================
 from google_drive_oauth import (
     get_authorization_url, 
