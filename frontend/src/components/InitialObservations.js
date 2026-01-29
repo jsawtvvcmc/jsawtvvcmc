@@ -89,12 +89,18 @@ const InitialObservations = () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
 
+    if (formData.selected_colors.length === 0) {
+      setMessage({ type: 'error', text: 'Please select at least one color' });
+      setLoading(false);
+      return;
+    }
+
     try {
       await axios.post(`${API}/cases/${formData.case_id}/initial-observation`, {
         kennel_number: parseInt(formData.kennel_number),
         gender: formData.gender,
         approximate_age: formData.approximate_age,
-        color_markings: formData.color_markings,
+        color_markings: formData.selected_colors.join(', '),
         body_condition: formData.body_condition,
         temperament: formData.temperament,
         visible_injuries: formData.visible_injuries,
@@ -111,7 +117,7 @@ const InitialObservations = () => {
         kennel_number: '',
         gender: 'Male',
         approximate_age: 'Adult 2-8 years',
-        color_markings: '',
+        selected_colors: [],
         body_condition: 'Normal',
         temperament: 'Calm',
         visible_injuries: false,
