@@ -147,5 +147,15 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
    - Cloud storage: Google Drive connection
    - Case number format: **JS-TAL-JAN-0001** (Org-Project-Month-Serial)
 
+4. **Auto Address Detection** (Jan 29, 2026)
+   - Reverse geocoding using OpenStreetMap/Nominatim API
+   - Auto-fills address when GPS is extracted from photo EXIF
+   - Also works with "Use Current Location" button
+
+5. **Reports with Images** (Jan 29, 2026)
+   - Catching Sheet: Shows photos, organization/municipal logos
+   - Case Papers: Shows catching & surgery photos, detailed medicine usage, post-op care
+   - Monthly Log: CSV export with summary statistics
+
 ### Known Issues
 - **Google Drive Multi-User** - Single token.json not suitable for multiple users
