@@ -127,7 +127,7 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 
 ---
 
-## Session Updates - Jan 28, 2026
+## Session Updates - Jan 28-29, 2026
 
 ### Completed
 1. **Bulk Upload Module** - Upload Excel files for Catching and Surgery records
@@ -140,6 +140,12 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
    - 18 medicines with specific protocols
    - Female-only medicines handled correctly
    - Cancelled surgeries skip deduction
+
+3. **Configuration System** (Jan 29, 2026)
+   - Organization settings: Name, Shortcode (JS), Logo, Registered Office
+   - Project settings: Name, Code (TAL), Address, Max Kennels (1-300), Municipal Logo
+   - Cloud storage: Google Drive connection
+   - Case number format: **JS-TAL-JAN-0001** (Org-Project-Month-Serial)
 
 ### Known Issues
 - **Google Drive Multi-User** - Single token.json not suitable for multiple users
