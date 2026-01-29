@@ -442,12 +442,66 @@ async def reverse_geocode(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Convert latitude/longitude to address using free Nominatim API (OpenStreetMap)
-    Falls back to basic coordinates if no address found
+    Convert latitude/longitude to address.
+    Uses Google Maps API if configured, otherwise falls back to OpenStreetMap.
     """
     try:
-        # Use Nominatim (OpenStreetMap) for free reverse geocoding
-        url = f"https://nominatim.openstreetmap.org/reverse"
+        # Check if Google Maps API key is configured
+        config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+        google_maps_key = config.get("google_maps_api_key") if config else None
+        
+        if google_maps_key:
+            # Use Google Maps Geocoding API
+            url = "https://maps.googleapis.com/maps/api/geocode/json"
+            params = {
+                "latlng": f"{lat},{lng}",
+                "key": google_maps_key,
+                "language": "en"
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params, timeout=10.0)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    if data.get("status") == "OK" and data.get("results"):
+                        result = data["results"][0]
+                        address = result.get("formatted_address", "")
+                        
+                        # Extract address components
+                        components = {}
+                        for component in result.get("address_components", []):
+                            types = component.get("types", [])
+                            if "route" in types:
+                                components["road"] = component["long_name"]
+                            elif "sublocality" in types or "neighborhood" in types:
+                                components["suburb"] = component["long_name"]
+                            elif "locality" in types:
+                                components["city"] = component["long_name"]
+                            elif "administrative_area_level_1" in types:
+                                components["state"] = component["long_name"]
+                            elif "postal_code" in types:
+                                components["postcode"] = component["long_name"]
+                            elif "country" in types:
+                                components["country"] = component["long_name"]
+                        
+                        return {
+                            "success": True,
+                            "address": address,
+                            "formatted_address": address,
+                            "components": components,
+                            "lat": lat,
+                            "lng": lng,
+                            "provider": "google_maps"
+                        }
+                    elif data.get("status") == "REQUEST_DENIED":
+                        logger.error(f"Google Maps API error: {data.get('error_message', 'Request denied')}")
+                    elif data.get("status") == "OVER_QUERY_LIMIT":
+                        logger.warning("Google Maps API quota exceeded, falling back to OpenStreetMap")
+        
+        # Fallback to OpenStreetMap/Nominatim (free)
+        url = "https://nominatim.openstreetmap.org/reverse"
         params = {
             "lat": lat,
             "lon": lng,
@@ -455,7 +509,7 @@ async def reverse_geocode(
             "addressdetails": 1
         }
         headers = {
-            "User-Agent": "J-APP-ABC-Program/1.0"  # Required by Nominatim
+            "User-Agent": "J-APP-ABC-Program/1.0"
         }
         
         async with httpx.AsyncClient() as client:
@@ -466,8 +520,6 @@ async def reverse_geocode(
                 
                 if "display_name" in data:
                     address = data["display_name"]
-                    
-                    # Extract structured address parts if available
                     addr_parts = data.get("address", {})
                     
                     return {
@@ -483,10 +535,10 @@ async def reverse_geocode(
                             "country": addr_parts.get("country", "")
                         },
                         "lat": lat,
-                        "lng": lng
+                        "lng": lng,
+                        "provider": "openstreetmap"
                     }
         
-        # Fallback if no address found
         return {
             "success": False,
             "address": f"Location: {lat:.6f}, {lng:.6f}",
