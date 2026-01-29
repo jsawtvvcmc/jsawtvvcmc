@@ -350,7 +350,7 @@ async def update_system_config(
     allowed_fields = [
         "organization_name", "organization_shortcode", "registered_office",
         "organization_logo", "project_name", "project_code", "municipal_logo",
-        "project_address", "max_kennels", "cloud_provider"
+        "project_address", "max_kennels", "cloud_provider", "google_maps_api_key"
     ]
     
     update_data = {k: v for k, v in config_data.items() if k in allowed_fields}
