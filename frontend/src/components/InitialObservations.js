@@ -241,17 +241,55 @@ const InitialObservations = () => {
               </Select>
             </div>
 
-            {/* Color/Markings */}
+            {/* Color/Markings - Checkboxes */}
             <div>
-              <Label htmlFor="color_markings">Color/Markings *</Label>
-              <Input
-                id="color_markings"
-                value={formData.color_markings}
-                onChange={(e) => setFormData({...formData, color_markings: e.target.value})}
-                placeholder="e.g., Brown with white patches"
-                required
-                data-testid="color-input"
-              />
+              <Label className="mb-3 block">Color/Markings * (Select all that apply)</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {COLOR_OPTIONS.map((color) => {
+                  const isSelected = formData.selected_colors.includes(color);
+                  const colorStyles = {
+                    'Black': 'bg-gray-900 border-gray-900',
+                    'White': 'bg-white border-gray-300',
+                    'Dark Brown': 'bg-amber-900 border-amber-900',
+                    'Light Brown': 'bg-amber-600 border-amber-600',
+                    'Grey': 'bg-gray-500 border-gray-500',
+                    'Fawn': 'bg-yellow-200 border-yellow-300'
+                  };
+                  return (
+                    <label
+                      key={color}
+                      className={`
+                        flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all
+                        ${isSelected 
+                          ? 'border-green-500 bg-green-50 ring-2 ring-green-200' 
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }
+                      `}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleColorToggle(color)}
+                        className="sr-only"
+                      />
+                      <div 
+                        className={`w-6 h-6 rounded-full border-2 ${colorStyles[color]}`}
+                      />
+                      <span className="font-medium text-gray-700">{color}</span>
+                      {isSelected && (
+                        <svg className="w-5 h-5 text-green-600 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+              {formData.selected_colors.length > 0 && (
+                <p className="text-sm text-green-600 mt-2">
+                  Selected: {formData.selected_colors.join(', ')}
+                </p>
+              )}
             </div>
 
             {/* Body Condition */}
