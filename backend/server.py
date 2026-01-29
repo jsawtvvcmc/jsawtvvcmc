@@ -236,12 +236,16 @@ async def create_default_superuser():
     if not existing_config:
         default_config = {
             "id": "system_config",
-            "organization_name": "Janice's Trust",
-            "registered_office": "A hilltop haven for animals",
-            "project_name": "ABC Program",
-            "project_code": "JAPP",
-            "project_address": "",
+            "organization_name": "Janice Smith Animal Welfare Trust",
+            "organization_shortcode": "JS",
+            "registered_office": "352, Vadgaon, Yashwant Nagar, Talegaon Dabhade, Maharashtra 410507",
+            "organization_logo": None,
+            "project_name": "Talegaon ABC Project",
+            "project_code": "TAL",
+            "municipal_logo": None,
+            "project_address": "352, Vadgaon, Yashwant Nagar, Talegaon Dabhade, Maharashtra 410507, India",
             "max_kennels": 300,
+            "cloud_provider": "google_drive",
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
         await db.system_config.insert_one(default_config)
