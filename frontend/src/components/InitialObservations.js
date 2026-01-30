@@ -25,7 +25,7 @@ const InitialObservations = () => {
   const [formData, setFormData] = useState({
     case_id: '',
     kennel_number: '',
-    gender: 'Male',
+    gender: '',
     approximate_age: 'Adult 2-8 years',
     selected_colors: [],
     body_condition: 'Normal',
