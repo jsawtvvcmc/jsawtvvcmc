@@ -117,6 +117,24 @@ const Settings = () => {
     }
   };
 
+  const disconnectGoogleDrive = async () => {
+    if (!window.confirm('Are you sure you want to disconnect your Google Drive? You will need to reconnect to upload photos.')) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API}/drive/disconnect`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessage({ type: 'success', text: 'Google Drive disconnected successfully' });
+      setDriveStatus({ connected: false });
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to disconnect Google Drive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const testDriveUpload = async () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
