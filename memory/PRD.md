@@ -70,9 +70,11 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 ## Prioritized Backlog
 
 ### P0 - Critical
-- [ ] **Multi-User Google Drive Auth** - Currently single `token.json` used for all users
-  - Fix: Store OAuth credentials per-user in database
-  - Required for production deployment
+- [x] **Multi-User Google Drive Auth** ✅ COMPLETED (Jan 30, 2026)
+  - Fixed: Credentials now stored per-user in `users` collection
+  - Each user connects their own Google Drive account
+  - OAuth flow properly links to the authenticated user
+  - Disconnect functionality added
 
 ### P1 - High Priority
 - [x] ~~**Google Drive Integration**~~ ✅ COMPLETED (Jan 28, 2026)
