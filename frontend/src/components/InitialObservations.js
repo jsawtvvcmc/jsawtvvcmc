@@ -89,6 +89,12 @@ const InitialObservations = () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
 
+    if (!formData.gender) {
+      setMessage({ type: 'error', text: 'Please select gender (Male/Female)' });
+      setLoading(false);
+      return;
+    }
+
     if (formData.selected_colors.length === 0) {
       setMessage({ type: 'error', text: 'Please select at least one color' });
       setLoading(false);
