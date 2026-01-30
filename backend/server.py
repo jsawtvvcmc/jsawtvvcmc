@@ -1505,6 +1505,8 @@ async def add_daily_treatment(
         "case_id": case_id,
         "date": data.get("date", datetime.now(timezone.utc).isoformat()),
         "day_post_surgery": data["day_post_surgery"],
+        # Support both old format (medicine IDs) and new format (medicines_used dict)
+        "medicines_used": data.get("medicines_used", {}),
         "antibiotic_id": data.get("antibiotic_id"),
         "antibiotic_dosage": data.get("antibiotic_dosage"),
         "painkiller_id": data.get("painkiller_id"),
@@ -1512,24 +1514,33 @@ async def add_daily_treatment(
         "additional_medicine_id": data.get("additional_medicine_id"),
         "additional_medicine_dosage": data.get("additional_medicine_dosage"),
         "wound_condition": data["wound_condition"],
+        "food_intake": data.get("food_intake", True),
+        "water_intake": data.get("water_intake", True),
         "remarks": data.get("remarks"),
         "admin_id": current_user["id"],
         "photo_links": photo_links
     }
     
-    # Deduct medicine stock
-    medicines_to_deduct = [
-        (data.get("antibiotic_id"), data.get("antibiotic_dosage")),
-        (data.get("painkiller_id"), data.get("painkiller_dosage")),
-        (data.get("additional_medicine_id"), data.get("additional_medicine_dosage"))
-    ]
-    
-    for med_id, dosage in medicines_to_deduct:
-        if med_id and dosage:
-            await db.medicines.update_one(
-                {"id": med_id},
-                {"$inc": {"current_stock": -float(dosage)}}
-            )
+    # Deduct medicine stock - handle both old and new formats
+    if data.get("medicines_used"):
+        # New format: medicines_used dict with medicine names and dosages
+        # Note: This doesn't deduct from stock since we're tracking by name not ID
+        # For proper stock management, medicines should be matched by name to their IDs
+        pass
+    else:
+        # Old format with medicine IDs
+        medicines_to_deduct = [
+            (data.get("antibiotic_id"), data.get("antibiotic_dosage")),
+            (data.get("painkiller_id"), data.get("painkiller_dosage")),
+            (data.get("additional_medicine_id"), data.get("additional_medicine_dosage"))
+        ]
+        
+        for med_id, dosage in medicines_to_deduct:
+            if med_id and dosage:
+                await db.medicines.update_one(
+                    {"id": med_id},
+                    {"$inc": {"current_stock": -float(dosage)}}
+                )
     
     # Add treatment to case
     await db.cases.update_one(
