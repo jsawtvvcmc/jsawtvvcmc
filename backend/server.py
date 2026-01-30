@@ -1334,13 +1334,32 @@ async def add_surgery_record(
                 )
     else:
         new_status = CaseStatus.SURGERY_COMPLETED.value
-        # Deduct medicine stock
+        # Deduct medicine stock and log usage
         for medicine_id, quantity in medicines_to_deduct.items():
             if quantity > 0:
+                # Get medicine details
+                medicine = await db.medicines.find_one({"id": medicine_id}, {"_id": 0})
+                
+                # Deduct from stock
                 await db.medicines.update_one(
                     {"id": medicine_id},
                     {"$inc": {"current_stock": -quantity}}
                 )
+                
+                # Log the usage
+                log_entry = {
+                    "id": str(uuid.uuid4()),
+                    "medicine_id": medicine_id,
+                    "medicine_name": medicine.get("name") if medicine else "Unknown",
+                    "type": "usage",
+                    "units_used": quantity,
+                    "case_id": case_id,
+                    "case_number": case.get("case_number"),
+                    "user_id": current_user["id"],
+                    "user_name": f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}",
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.medicine_logs.insert_one(log_entry)
     
     await db.cases.update_one(
         {"id": case_id},
