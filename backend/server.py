@@ -1505,9 +1505,9 @@ async def create_daily_feeding(
 ):
     """Create daily feeding record"""
     
-    # Upload photos to Google Drive (Feeding)
+    # Upload photos to Google Drive (Feeding) using current user's credentials
     photo_links = []
-    drive_uploader = await get_drive_uploader(db)
+    drive_uploader = await get_drive_uploader_for_user(db, current_user)
     
     if drive_uploader and data.get("photos"):
         feeding_date = datetime.fromisoformat(data.get("date", datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')) if data.get("date") else datetime.now(timezone.utc)
@@ -1526,6 +1526,14 @@ async def create_daily_feeding(
                 )
                 if result:
                     photo_links.append(result)
+        
+        # Update user's credentials if refreshed
+        updated_creds = drive_uploader.get_updated_credentials()
+        if updated_creds.get("access_token") != drive_uploader.creds_data.get("access_token"):
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$set": {"google_drive_credentials": updated_creds}}
+            )
     
     feeding = {
         "id": str(uuid.uuid4()),
