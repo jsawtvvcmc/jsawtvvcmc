@@ -237,9 +237,43 @@ const Reports = () => {
     const orgLogo = config?.organization_logo || '';
     const municipalLogo = config?.municipal_logo || '';
 
-    // Get photo links
+    // Get photo links and convert to URLs
     const catchingPhotos = caseData.catching?.photo_links || [];
     const surgeryPhotos = caseData.surgery?.photo_links || [];
+
+    // Helper to get image URL from photo object
+    const getPhotoUrl = (photo) => {
+      if (typeof photo === 'object' && photo.file_id) {
+        return `https://drive.google.com/uc?export=view&id=${photo.file_id}`;
+      }
+      if (typeof photo === 'string') {
+        return `https://drive.google.com/uc?export=view&id=${photo}`;
+      }
+      return '';
+    };
+
+    // Build photo HTML
+    const catchingPhotoHtml = catchingPhotos.slice(0, 2).map((photo, idx) => {
+      const url = getPhotoUrl(photo);
+      return url ? `
+        <div class="photo-item">
+          <img src="${url}" class="photo-img" alt="Catching Photo ${idx + 1}" onerror="this.onerror=null;this.alt='No image'">
+          <div class="photo-label">Catching Photo ${idx + 1}</div>
+        </div>
+      ` : '';
+    }).join('');
+
+    const surgeryPhotoHtml = surgeryPhotos.slice(0, 2).map((photo, idx) => {
+      const url = getPhotoUrl(photo);
+      return url ? `
+        <div class="photo-item">
+          <img src="${url}" class="photo-img" alt="Surgery Photo ${idx + 1}" onerror="this.onerror=null;this.alt='No image'">
+          <div class="photo-label">Surgery Photo ${idx + 1}</div>
+        </div>
+      ` : '';
+    }).join('');
+
+    const hasPhotos = catchingPhotos.length > 0 || surgeryPhotos.length > 0;
 
     // Get medicines used
     const medicines = caseData.surgery?.medicines_used || caseData.surgery?.medicines || {};
