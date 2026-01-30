@@ -613,14 +613,14 @@ async def drive_oauth_callback(code: str, state: str = None):
         logger.info(f"Google Drive connected for user {user_id}")
         
         # Get frontend URL for redirect
-        frontend_url = os.environ.get("FRONTEND_URL", "https://janice-app.preview.emergentagent.com")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://abc-program.preview.emergentagent.com")
         
         # Redirect to frontend with success message
         return RedirectResponse(url=f"{frontend_url}/?drive_connected=true")
         
     except Exception as e:
         logger.error(f"OAuth callback failed: {str(e)}")
-        frontend_url = os.environ.get("FRONTEND_URL", "https://janice-app.preview.emergentagent.com")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://abc-program.preview.emergentagent.com")
         return RedirectResponse(url=f"{frontend_url}/?drive_error={str(e)}")
 
 @api_router.get("/drive/status")
