@@ -227,7 +227,9 @@ const Reports = () => {
     let medicineHtml = '';
     Object.entries(medicines).forEach(([name, dosage]) => {
       if (dosage > 0) {
-        medicineHtml += '<div class="medicine-item"><strong>' + name + ':</strong> ' + dosage + '</div>';
+        // Round to 1 decimal place
+        const roundedDosage = Math.round(dosage * 10) / 10;
+        medicineHtml += '<div class="medicine-item"><strong>' + name + ':</strong> ' + roundedDosage + '</div>';
       }
     });
 
