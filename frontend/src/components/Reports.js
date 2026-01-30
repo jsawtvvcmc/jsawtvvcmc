@@ -69,12 +69,33 @@ const Reports = () => {
   // Get Google Drive image URL from photo object or file ID
   const getPhotoUrl = (photo) => {
     if (!photo) return '';
-    if (typeof photo === 'object' && photo.file_id) {
-      return 'https://drive.google.com/uc?export=view&id=' + photo.file_id;
+    
+    // If photo is an object with direct_link, use it
+    if (typeof photo === 'object') {
+      // Prefer thumbnail link for reports (faster loading)
+      if (photo.direct_link) {
+        return photo.direct_link;
+      }
+      if (photo.file_id) {
+        return `https://drive.google.com/thumbnail?id=${photo.file_id}&sz=w400`;
+      }
+      if (photo.web_view_link) {
+        // Extract file ID from web view link
+        const match = photo.web_view_link.match(/\/d\/([^/]+)/);
+        if (match) {
+          return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
+        }
+      }
     }
+    
+    // If photo is just a string (file ID)
     if (typeof photo === 'string') {
-      return 'https://drive.google.com/uc?export=view&id=' + photo;
+      if (photo.startsWith('http')) {
+        return photo;
+      }
+      return `https://drive.google.com/thumbnail?id=${photo}&sz=w400`;
     }
+    
     return '';
   };
 
