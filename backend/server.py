@@ -772,16 +772,195 @@ async def add_medicine_stock(
     stock_data: MedicineStockAdd,
     current_user: dict = Depends(get_current_user)
 ):
-    """Add medicine stock"""
-    result = await db.medicines.update_one(
-        {"id": stock_data.medicine_id},
-        {"$inc": {"current_stock": stock_data.quantity}}
-    )
-    
-    if result.matched_count == 0:
+    """Add medicine stock - quantity is in PACKS, converted to units based on packing_size"""
+    # Get the medicine to find packing_size
+    medicine = await db.medicines.find_one({"id": stock_data.medicine_id}, {"_id": 0})
+    if not medicine:
         raise HTTPException(status_code=404, detail="Medicine not found")
     
-    return {"message": "Stock added successfully", "quantity": stock_data.quantity}
+    packing_size = medicine.get("packing_size", 1)
+    
+    # Convert packs to units
+    units_to_add = stock_data.quantity * packing_size
+    
+    # Update stock
+    result = await db.medicines.update_one(
+        {"id": stock_data.medicine_id},
+        {"$inc": {"current_stock": units_to_add}}
+    )
+    
+    # Log the stock addition
+    log_entry = {
+        "id": str(uuid.uuid4()),
+        "medicine_id": stock_data.medicine_id,
+        "medicine_name": medicine.get("name"),
+        "type": "restock",
+        "packs_added": stock_data.quantity,
+        "units_added": units_to_add,
+        "packing_size": packing_size,
+        "batch_number": stock_data.batch_number,
+        "expiry_date": stock_data.expiry_date,
+        "date": stock_data.date or datetime.now(timezone.utc).isoformat(),
+        "user_id": current_user["id"],
+        "user_name": f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.medicine_logs.insert_one(log_entry)
+    
+    return {
+        "message": "Stock added successfully", 
+        "packs_added": stock_data.quantity,
+        "units_added": units_to_add,
+        "packing_size": packing_size
+    }
+
+@api_router.get("/medicines/stock/reset")
+async def reset_medicine_stock(
+    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+):
+    """Reset all medicine stock to 0 and clear logs (for fixing data issues)"""
+    await db.medicines.update_many({}, {"$set": {"current_stock": 0}})
+    await db.medicine_logs.delete_many({})
+    return {"message": "All medicine stock reset to 0"}
+
+@api_router.get("/medicines/logs")
+async def get_medicine_logs(
+    start_date: str = None,
+    end_date: str = None,
+    medicine_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get medicine usage and restock logs"""
+    query = {}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    if medicine_id:
+        query["medicine_id"] = medicine_id
+    
+    logs = await db.medicine_logs.find(query, {"_id": 0}).sort("created_at", -1).to_list(None)
+    return logs
+
+@api_router.get("/medicines/usage-report")
+async def get_medicine_usage_report(
+    period: str = "month",
+    month: str = None,
+    week: int = None,
+    start_date: str = None,
+    end_date: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get medicine usage report for a period.
+    period: 'month', 'week', 'custom'
+    month: YYYY-MM format (for month/week period)
+    week: 1-5 (for week period)
+    start_date, end_date: YYYY-MM-DD (for custom period)
+    """
+    from datetime import date
+    import calendar
+    
+    now = datetime.now(timezone.utc)
+    
+    if period == "month":
+        if month:
+            year, mon = map(int, month.split('-'))
+        else:
+            year, mon = now.year, now.month
+        
+        first_day = date(year, mon, 1)
+        last_day = date(year, mon, calendar.monthrange(year, mon)[1])
+        start = first_day.isoformat()
+        end = last_day.isoformat() + "T23:59:59"
+        period_name = f"{calendar.month_name[mon]} {year}"
+        
+    elif period == "week":
+        if month:
+            year, mon = map(int, month.split('-'))
+        else:
+            year, mon = now.year, now.month
+        
+        week_num = week or 1
+        first_day_of_month = date(year, mon, 1)
+        
+        # Calculate week boundaries
+        # Week 1: days 1-7, Week 2: days 8-14, etc.
+        week_start_day = (week_num - 1) * 7 + 1
+        week_end_day = min(week_num * 7, calendar.monthrange(year, mon)[1])
+        
+        start = date(year, mon, week_start_day).isoformat()
+        end = date(year, mon, week_end_day).isoformat() + "T23:59:59"
+        period_name = f"Week {week_num} of {calendar.month_name[mon]} {year}"
+        
+    elif period == "custom":
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="start_date and end_date required for custom period")
+        start = start_date
+        end = end_date + "T23:59:59"
+        period_name = f"{start_date} to {end_date}"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid period. Use 'month', 'week', or 'custom'")
+    
+    # Get all logs in the period
+    logs = await db.medicine_logs.find({
+        "created_at": {"$gte": start, "$lte": end}
+    }, {"_id": 0}).to_list(None)
+    
+    # Get all medicines
+    medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+    medicine_map = {m["id"]: m for m in medicines}
+    
+    # Aggregate by medicine
+    usage_summary = {}
+    for log in logs:
+        med_id = log.get("medicine_id")
+        if med_id not in usage_summary:
+            med = medicine_map.get(med_id, {})
+            usage_summary[med_id] = {
+                "medicine_id": med_id,
+                "medicine_name": log.get("medicine_name") or med.get("name", "Unknown"),
+                "unit": med.get("unit", ""),
+                "packing_size": med.get("packing_size", 1),
+                "current_stock": med.get("current_stock", 0),
+                "restocked_units": 0,
+                "restocked_packs": 0,
+                "used_units": 0,
+                "restock_entries": [],
+                "usage_entries": []
+            }
+        
+        if log.get("type") == "restock":
+            usage_summary[med_id]["restocked_units"] += log.get("units_added", 0)
+            usage_summary[med_id]["restocked_packs"] += log.get("packs_added", 0)
+            usage_summary[med_id]["restock_entries"].append({
+                "date": log.get("date"),
+                "packs": log.get("packs_added", 0),
+                "units": log.get("units_added", 0),
+                "batch": log.get("batch_number"),
+                "user": log.get("user_name")
+            })
+        elif log.get("type") == "usage":
+            usage_summary[med_id]["used_units"] += log.get("units_used", 0)
+            usage_summary[med_id]["usage_entries"].append({
+                "date": log.get("created_at"),
+                "case_number": log.get("case_number"),
+                "units": log.get("units_used", 0),
+                "user": log.get("user_name")
+            })
+    
+    return {
+        "period": period_name,
+        "start_date": start,
+        "end_date": end,
+        "summary": list(usage_summary.values()),
+        "total_restock_entries": len([l for l in logs if l.get("type") == "restock"]),
+        "total_usage_entries": len([l for l in logs if l.get("type") == "usage"])
+    }
 
 @api_router.put("/medicines/{medicine_id}")
 async def update_medicine(
