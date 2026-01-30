@@ -1122,7 +1122,7 @@ async def initialize_kennels(current_user: dict = Depends(get_current_user)):
     return {"message": f"Initialized {len(kennels)} kennels"}
 
 # ==================== CASE MANAGEMENT ====================
-from drive_uploader import get_drive_uploader
+from drive_uploader import get_drive_uploader, get_drive_uploader_for_user
 
 @api_router.post("/cases/catching")
 async def create_catching_record(
