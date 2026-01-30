@@ -56,40 +56,66 @@ const CatchingForm = () => {
 
   const extractGPSFromImage = async (file) => {
     setExtractingGPS(true);
-    setMessage({ type: '', text: '' });
+    setMessage({ type: 'info', text: 'Extracting GPS from photo...' });
     
     try {
-      // Use exif-js library or built-in image extraction
+      // Wait a moment for EXIF library to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Use exif-js library
       const EXIF = window.EXIF;
       
       if (EXIF) {
-        EXIF.getData(file, async function() {
-          const lat = EXIF.getTag(this, "GPSLatitude");
-          const latRef = EXIF.getTag(this, "GPSLatitudeRef");
-          const lon = EXIF.getTag(this, "GPSLongitude");
-          const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
-          
-          if (lat && lon) {
-            // Convert GPS coordinates to decimal degrees
-            const latDecimal = convertDMSToDD(lat, latRef);
-            const lonDecimal = convertDMSToDD(lon, lonRef);
-            
-            setFormData(prev => ({
-              ...prev,
-              location_lat: latDecimal,
-              location_lng: lonDecimal
-            }));
-            
-            // Auto-fetch address from coordinates
-            await fetchAddressFromCoordinates(latDecimal, lonDecimal);
-          } else {
-            setMessage({ type: 'error', text: 'No GPS data found in photo. Please enable location in camera settings.' });
+        // Create a new FileReader to get the image as an array buffer
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          try {
+            // Create an image element
+            const img = new Image();
+            img.onload = async function() {
+              EXIF.getData(img, async function() {
+                const allTags = EXIF.getAllTags(this);
+                console.log('EXIF Tags found:', allTags);
+                
+                const lat = EXIF.getTag(this, "GPSLatitude");
+                const latRef = EXIF.getTag(this, "GPSLatitudeRef");
+                const lon = EXIF.getTag(this, "GPSLongitude");
+                const lonRef = EXIF.getTag(this, "GPSLongitudeRef");
+                
+                console.log('GPS Data:', { lat, latRef, lon, lonRef });
+                
+                if (lat && lon) {
+                  // Convert GPS coordinates to decimal degrees
+                  const latDecimal = convertDMSToDD(lat, latRef);
+                  const lonDecimal = convertDMSToDD(lon, lonRef);
+                  
+                  console.log('Converted coordinates:', latDecimal, lonDecimal);
+                  
+                  setFormData(prev => ({
+                    ...prev,
+                    location_lat: latDecimal.toFixed(6),
+                    location_lng: lonDecimal.toFixed(6)
+                  }));
+                  
+                  // Auto-fetch address from coordinates
+                  await fetchAddressFromCoordinates(latDecimal, lonDecimal);
+                } else {
+                  setMessage({ type: 'error', text: 'No GPS data found in photo. Please enable location in camera settings, or use "Use Current Location" button.' });
+                }
+                setExtractingGPS(false);
+              });
+            };
+            img.src = e.target.result;
+          } catch (err) {
+            console.error('EXIF parsing error:', err);
+            setMessage({ type: 'error', text: 'Could not parse GPS from photo. Please enter manually.' });
+            setExtractingGPS(false);
           }
-          setExtractingGPS(false);
-        });
+        };
+        reader.readAsDataURL(file);
       } else {
-        // Fallback: Try to read EXIF using FileReader
-        await extractGPSFallback(file);
+        console.error('EXIF library not loaded');
+        setMessage({ type: 'error', text: 'GPS extraction library not loaded. Please use "Use Current Location" button.' });
         setExtractingGPS(false);
       }
     } catch (error) {
