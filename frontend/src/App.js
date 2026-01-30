@@ -187,6 +187,14 @@ function AppRoutes() {
         </PrivateRoute>
       } />
       
+      <Route path="/records" element={
+        <PrivateRoute>
+          <DashboardLayout>
+            <Records />
+          </DashboardLayout>
+        </PrivateRoute>
+      } />
+      
       <Route path="/" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
