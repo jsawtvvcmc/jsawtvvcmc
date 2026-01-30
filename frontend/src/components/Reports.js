@@ -183,23 +183,26 @@ const Reports = () => {
     <tbody>
       ${dateCases.map((c, idx) => {
         const photoLinks = c.catching?.photo_links || [];
-        return `
+        const photoHtml = photoLinks.length > 0 
+          ? photoLinks.slice(0, 2).map(photo => {
+              const imgUrl = typeof photo === 'object' && photo.file_id 
+                ? \`https://drive.google.com/uc?export=view&id=\${photo.file_id}\`
+                : (typeof photo === 'string' ? \`https://drive.google.com/uc?export=view&id=\${photo}\` : '');
+              return imgUrl ? \`<img src="\${imgUrl}" class="case-image" alt="Photo" onerror="this.onerror=null;this.src='';this.alt='No img'">\` : '';
+            }).join('')
+          : '<div class="no-image">No Photo</div>';
+        return \`
         <tr>
-          <td style="text-align: center; font-weight: bold;">${idx + 1}</td>
+          <td style="text-align: center; font-weight: bold;">\${idx + 1}</td>
           <td>
             <div class="case-images">
-              ${photoLinks.length > 0 
-                ? photoLinks.slice(0, 2).map(id => 
-                    `<img src="${getDriveImageUrl(id)}" class="case-image" alt="Photo" onerror="this.style.display='none'">`
-                  ).join('')
-                : '<div class="no-image">No Photo</div>'
-              }
+              \${photoHtml}
             </div>
           </td>
-          <td>${c.catching?.address || 'N/A'}</td>
-          <td style="font-weight: bold; font-size: 11px;">${c.case_number}</td>
+          <td>\${c.catching?.address || 'N/A'}</td>
+          <td style="font-weight: bold; font-size: 11px;">\${c.case_number}</td>
         </tr>
-      `}).join('')}
+      \`}).join('')}
     </tbody>
   </table>
 
