@@ -866,17 +866,18 @@ async def get_medicine_logs(
     """Get medicine usage and restock logs"""
     query = {}
     
+    # Filter by user-provided 'date' field, not 'created_at'
     if start_date:
-        query["created_at"] = {"$gte": start_date}
+        query["date"] = {"$gte": start_date}
     if end_date:
-        if "created_at" in query:
-            query["created_at"]["$lte"] = end_date
+        if "date" in query:
+            query["date"]["$lte"] = end_date
         else:
-            query["created_at"] = {"$lte": end_date}
+            query["date"] = {"$lte": end_date}
     if medicine_id:
         query["medicine_id"] = medicine_id
     
-    logs = await db.medicine_logs.find(query, {"_id": 0}).sort("created_at", -1).to_list(None)
+    logs = await db.medicine_logs.find(query, {"_id": 0}).sort("date", -1).to_list(None)
     return logs
 
 @api_router.get("/medicines/usage-report")
