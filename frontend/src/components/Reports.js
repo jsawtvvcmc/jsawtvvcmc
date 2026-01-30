@@ -67,36 +67,36 @@ const Reports = () => {
   };
 
   // Get Google Drive image URL from photo object or file ID
+  // Using lh3.googleusercontent.com format which works better for embedding
   const getPhotoUrl = (photo) => {
     if (!photo) return '';
     
-    // If photo is an object with direct_link, use it
+    let fileId = null;
+    
+    // Extract file ID from various formats
     if (typeof photo === 'object') {
-      // Prefer thumbnail link for reports (faster loading)
-      if (photo.direct_link) {
-        return photo.direct_link;
-      }
-      if (photo.file_id) {
-        return `https://drive.google.com/thumbnail?id=${photo.file_id}&sz=w400`;
-      }
-      if (photo.web_view_link) {
-        // Extract file ID from web view link
+      fileId = photo.file_id;
+      if (!fileId && photo.web_view_link) {
         const match = photo.web_view_link.match(/\/d\/([^/]+)/);
-        if (match) {
-          return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w400`;
-        }
+        if (match) fileId = match[1];
+      }
+    } else if (typeof photo === 'string') {
+      if (photo.startsWith('http') && photo.includes('id=')) {
+        const match = photo.match(/id=([^&]+)/);
+        if (match) fileId = match[1];
+      } else if (photo.includes('/d/')) {
+        const match = photo.match(/\/d\/([^/]+)/);
+        if (match) fileId = match[1];
+      } else {
+        fileId = photo;
       }
     }
     
-    // If photo is just a string (file ID)
-    if (typeof photo === 'string') {
-      if (photo.startsWith('http')) {
-        return photo;
-      }
-      return `https://drive.google.com/thumbnail?id=${photo}&sz=w400`;
-    }
+    if (!fileId) return '';
     
-    return '';
+    // Use Google's export view URL which works for embedded images
+    // Adding export=view helps with embedding
+    return `https://drive.google.com/uc?export=view&id=${fileId}`;
   };
 
   // 1. Catching Sheet Report
