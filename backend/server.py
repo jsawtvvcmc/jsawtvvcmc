@@ -1137,9 +1137,9 @@ async def create_catching_record(
     project_code = config.get("project_code", "TAL") if config else "TAL"
     case_number = await get_next_case_number(db, org_shortcode, project_code)
     
-    # Upload photos to Google Drive
+    # Upload photos to Google Drive (using current user's credentials)
     photo_links = []
-    drive_uploader = await get_drive_uploader(db)
+    drive_uploader = await get_drive_uploader_for_user(db, current_user)
     
     if drive_uploader:
         photos = data.get("photos", [])
@@ -1160,9 +1160,13 @@ async def create_catching_record(
                 if result:
                     photo_links.append(result)
         
-        # Update credentials if refreshed
+        # Update user's credentials if refreshed
         updated_creds = drive_uploader.get_updated_credentials()
         if updated_creds.get("access_token") != drive_uploader.creds_data.get("access_token"):
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$set": {"google_drive_credentials": updated_creds}}
+            )
             await db.drive_credentials.update_one(
                 {"user_id": updated_creds.get("user_id", "system")},
                 {"$set": updated_creds}
