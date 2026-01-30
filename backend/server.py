@@ -1580,9 +1580,9 @@ async def add_release_record(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     
-    # Upload photos to Google Drive (Release)
+    # Upload photos to Google Drive (Release) using current user's credentials
     photo_links = []
-    drive_uploader = await get_drive_uploader(db)
+    drive_uploader = await get_drive_uploader_for_user(db, current_user)
     
     if drive_uploader:
         photos = data.get("photos", [])
@@ -1602,6 +1602,14 @@ async def add_release_record(
                 )
                 if result:
                     photo_links.append(result)
+        
+        # Update user's credentials if refreshed
+        updated_creds = drive_uploader.get_updated_credentials()
+        if updated_creds.get("access_token") != drive_uploader.creds_data.get("access_token"):
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$set": {"google_drive_credentials": updated_creds}}
+            )
     
     release = {
         "date_time": data.get("date_time", datetime.now(timezone.utc).isoformat()),
