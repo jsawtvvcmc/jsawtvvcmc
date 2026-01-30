@@ -1006,20 +1006,28 @@ async def get_medicine_usage_report(
                 "usage_entries": []
             }
         
+        # Convert datetime to ISO string for JSON serialization
+        log_date = log.get("date")
+        if isinstance(log_date, datetime):
+            log_date = log_date.isoformat()
+        
         if log.get("type") == "restock":
             usage_summary[med_id]["restocked_units"] += log.get("units_added", 0)
             usage_summary[med_id]["restocked_packs"] += log.get("packs_added", 0)
             usage_summary[med_id]["restock_entries"].append({
-                "date": log.get("date"),
+                "date": log_date,
                 "packs": log.get("packs_added", 0),
                 "units": log.get("units_added", 0),
                 "batch": log.get("batch_number"),
                 "user": log.get("user_name")
             })
         elif log.get("type") == "usage":
+            created_at = log.get("created_at")
+            if isinstance(created_at, datetime):
+                created_at = created_at.isoformat()
             usage_summary[med_id]["used_units"] += log.get("units_used", 0)
             usage_summary[med_id]["usage_entries"].append({
-                "date": log.get("created_at"),
+                "date": created_at,
                 "case_number": log.get("case_number"),
                 "units": log.get("units_used", 0),
                 "user": log.get("user_name")
