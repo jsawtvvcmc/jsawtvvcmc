@@ -909,7 +909,7 @@ async def get_medicine_usage_report(
         
         first_day = date(year, mon, 1)
         last_day = date(year, mon, calendar.monthrange(year, mon)[1])
-        start = first_day.isoformat()
+        start = first_day.isoformat() + "T00:00:00"
         end = last_day.isoformat() + "T23:59:59"
         period_name = f"{calendar.month_name[mon]} {year}"
         
@@ -927,15 +927,15 @@ async def get_medicine_usage_report(
         week_start_day = (week_num - 1) * 7 + 1
         week_end_day = min(week_num * 7, calendar.monthrange(year, mon)[1])
         
-        start = date(year, mon, week_start_day).isoformat()
+        start = date(year, mon, week_start_day).isoformat() + "T00:00:00"
         end = date(year, mon, week_end_day).isoformat() + "T23:59:59"
         period_name = f"Week {week_num} of {calendar.month_name[mon]} {year}"
         
     elif period == "custom":
         if not start_date or not end_date:
             raise HTTPException(status_code=400, detail="start_date and end_date required for custom period")
-        start = start_date
-        end = end_date + "T23:59:59"
+        start = start_date + "T00:00:00" if "T" not in start_date else start_date
+        end = end_date + "T23:59:59" if "T" not in end_date else end_date
         period_name = f"{start_date} to {end_date}"
     else:
         raise HTTPException(status_code=400, detail="Invalid period. Use 'month', 'week', or 'custom'")
