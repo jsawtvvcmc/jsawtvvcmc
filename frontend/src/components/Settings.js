@@ -389,13 +389,19 @@ const Settings = () => {
                   <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
                   <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
                 </svg>
-                Google Drive Integration
+                Your Google Drive Connection
               </CardTitle>
               <CardDescription>
-                Connect to Google Drive to store case photos and documents
+                Connect your personal Google Drive to store case photos and documents
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-4">
+                <p className="text-sm text-blue-700">
+                  <strong>Multi-User Support:</strong> Each user connects their own Google Drive. Photos uploaded by you will be stored in your connected Drive account.
+                </p>
+              </div>
+              
               <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
                 <div className={`w-4 h-4 rounded-full ${driveStatus?.connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                 <div>
@@ -404,6 +410,9 @@ const Settings = () => {
                   </span>
                   {driveStatus?.user_email && (
                     <p className="text-sm text-gray-500">{driveStatus.user_email}</p>
+                  )}
+                  {driveStatus?.connected_at && (
+                    <p className="text-xs text-gray-400">Connected on: {new Date(driveStatus.connected_at).toLocaleDateString()}</p>
                   )}
                 </div>
               </div>
@@ -416,7 +425,7 @@ const Settings = () => {
                     className="bg-blue-600 hover:bg-blue-700"
                     data-testid="connect-drive-btn"
                   >
-                    {loading ? 'Connecting...' : 'Connect Google Drive'}
+                    {loading ? 'Connecting...' : 'Connect Your Google Drive'}
                   </Button>
                 ) : (
                   <>
@@ -434,6 +443,14 @@ const Settings = () => {
                       variant="outline"
                     >
                       Reconnect Account
+                    </Button>
+                    <Button 
+                      onClick={disconnectGoogleDrive}
+                      disabled={loading}
+                      variant="outline"
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      Disconnect
                     </Button>
                   </>
                 )}
