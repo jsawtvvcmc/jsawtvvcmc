@@ -1167,10 +1167,6 @@ async def create_catching_record(
                 {"id": current_user["id"]},
                 {"$set": {"google_drive_credentials": updated_creds}}
             )
-            await db.drive_credentials.update_one(
-                {"user_id": updated_creds.get("user_id", "system")},
-                {"$set": updated_creds}
-            )
     
     case_dict = {
         "id": str(uuid.uuid4()),
