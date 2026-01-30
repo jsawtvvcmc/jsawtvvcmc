@@ -868,20 +868,42 @@ async def get_medicine_logs(
     current_user: dict = Depends(get_current_user)
 ):
     """Get medicine usage and restock logs"""
+    from datetime import datetime as dt
+    
     query = {}
     
-    # Filter by user-provided 'date' field, not 'created_at'
+    # Filter by user-provided 'date' field - convert strings to datetime for MongoDB
     if start_date:
-        query["date"] = {"$gte": start_date}
+        try:
+            start_dt = dt.fromisoformat(start_date.replace(" ", "T") + ("T00:00:00" if "T" not in start_date and " " not in start_date else ""))
+            query["date"] = {"$gte": start_dt}
+        except ValueError:
+            query["date"] = {"$gte": start_date}
     if end_date:
-        if "date" in query:
-            query["date"]["$lte"] = end_date
-        else:
-            query["date"] = {"$lte": end_date}
+        try:
+            end_str = end_date + ("T23:59:59" if "T" not in end_date and " " not in end_date else "")
+            end_dt = dt.fromisoformat(end_str.replace(" ", "T"))
+            if "date" in query:
+                query["date"]["$lte"] = end_dt
+            else:
+                query["date"] = {"$lte": end_dt}
+        except ValueError:
+            if "date" in query:
+                query["date"]["$lte"] = end_date
+            else:
+                query["date"] = {"$lte": end_date}
     if medicine_id:
         query["medicine_id"] = medicine_id
     
     logs = await db.medicine_logs.find(query, {"_id": 0}).sort("date", -1).to_list(None)
+    
+    # Convert datetime objects to ISO strings for JSON serialization
+    for log in logs:
+        if isinstance(log.get("date"), datetime):
+            log["date"] = log["date"].isoformat()
+        if isinstance(log.get("created_at"), datetime):
+            log["created_at"] = log["created_at"].isoformat()
+    
     return logs
 
 @api_router.get("/medicines/usage-report")
