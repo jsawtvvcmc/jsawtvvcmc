@@ -822,7 +822,11 @@ async def add_medicine_stock(
         {"$inc": {"current_stock": units_to_add}}
     )
     
-    # Log the stock addition
+    # Log the stock addition - ensure date has time component for consistent querying
+    stock_date = stock_data.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if "T" not in stock_date:
+        stock_date = stock_date + "T00:00:00"
+    
     log_entry = {
         "id": str(uuid.uuid4()),
         "medicine_id": stock_data.medicine_id,
@@ -833,7 +837,7 @@ async def add_medicine_stock(
         "packing_size": packing_size,
         "batch_number": stock_data.batch_number,
         "expiry_date": stock_data.expiry_date,
-        "date": stock_data.date or datetime.now(timezone.utc).isoformat(),
+        "date": stock_date,
         "user_id": current_user["id"],
         "user_name": f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}",
         "created_at": datetime.now(timezone.utc).isoformat()
