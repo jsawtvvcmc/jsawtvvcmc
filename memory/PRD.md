@@ -111,6 +111,11 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 | /api/bulk-upload/surgery | POST | Bulk upload surgery records |
 | /api/medicine-protocol | GET | Get medicine dosage rules |
 | /api/calculate-medicines | POST | Calculate medicines for weight/gender |
+| /api/drive/connect | GET | Initiate Google Drive OAuth (per-user) |
+| /api/drive/status | GET | Check user's Drive connection status |
+| /api/drive/disconnect | POST | Disconnect user's Google Drive |
+| /api/drive/upload-test | POST | Test upload to user's Drive |
+| /api/drive/callback | GET | OAuth callback handler |
 
 ---
 
