@@ -244,13 +244,34 @@ class DriveUploader:
         return self.creds_data
 
 
-async def get_drive_uploader(db) -> Optional[DriveUploader]:
-    """Get DriveUploader instance with credentials from database"""
-    # Try to get system credentials
-    creds = await db.drive_credentials.find_one({"user_id": "system"}, {"_id": 0})
+async def get_drive_uploader(db, user_id: str = None) -> Optional[DriveUploader]:
+    """
+    Get DriveUploader instance with credentials from database.
+    
+    Multi-user safe: If user_id is provided, uses that user's credentials.
+    Falls back to any available credentials for backward compatibility.
+    
+    Args:
+        db: Database connection
+        user_id: The ID of the user whose Drive credentials should be used
+    
+    Returns:
+        DriveUploader instance or None if no credentials found
+    """
+    creds = None
+    
+    # If user_id provided, try to get that user's credentials
+    if user_id:
+        user = await db.users.find_one({"id": user_id}, {"_id": 0, "google_drive_credentials": 1})
+        if user and user.get("google_drive_credentials"):
+            creds = user["google_drive_credentials"]
+            logger.info(f"Using Google Drive credentials for user {user_id}")
+    
+    # Fallback: try legacy drive_credentials collection (for backward compatibility)
     if not creds:
-        # Try any available credentials
-        creds = await db.drive_credentials.find_one({}, {"_id": 0})
+        creds = await db.drive_credentials.find_one({"user_id": "system"}, {"_id": 0})
+        if creds:
+            logger.info("Using legacy system Google Drive credentials")
     
     if not creds:
         logger.warning("No Google Drive credentials found")
@@ -262,3 +283,17 @@ async def get_drive_uploader(db) -> Optional[DriveUploader]:
         return None
     
     return DriveUploader(creds, root_folder_id)
+
+
+async def get_drive_uploader_for_user(db, current_user: dict) -> Optional[DriveUploader]:
+    """
+    Convenience function to get DriveUploader for a user from their user dict.
+    
+    Args:
+        db: Database connection
+        current_user: The user dict (from get_current_user dependency)
+    
+    Returns:
+        DriveUploader instance or None if no credentials found
+    """
+    return await get_drive_uploader(db, user_id=current_user.get("id"))
