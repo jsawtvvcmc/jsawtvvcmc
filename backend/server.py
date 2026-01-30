@@ -945,16 +945,20 @@ async def get_medicine_usage_report(
         raise HTTPException(status_code=400, detail="Invalid period. Use 'month', 'week', or 'custom'")
     
     # Get all logs in the period - filter by user-provided 'date' field
-    # Handle both datetime formats: "YYYY-MM-DD HH:MM:SS" and "YYYY-MM-DDTHH:MM:SS"
-    # We use $or to match both formats
-    start_with_space = start.replace("T", " ")
-    end_with_space = end.replace("T", " ")
+    # Convert string dates to datetime for proper MongoDB comparison
+    from datetime import datetime as dt
+    
+    # Parse start and end dates - handle both T and space formats
+    try:
+        start_dt = dt.fromisoformat(start.replace(" ", "T"))
+        end_dt = dt.fromisoformat(end.replace(" ", "T"))
+    except ValueError:
+        # Fallback if parsing fails
+        start_dt = dt.strptime(start.replace("T", " "), "%Y-%m-%d %H:%M:%S")
+        end_dt = dt.strptime(end.replace("T", " "), "%Y-%m-%d %H:%M:%S")
     
     logs = await db.medicine_logs.find({
-        "$or": [
-            {"date": {"$gte": start, "$lte": end}},
-            {"date": {"$gte": start_with_space, "$lte": end_with_space}}
-        ]
+        "date": {"$gte": start_dt, "$lte": end_dt}
     }, {"_id": 0}).to_list(None)
     
     # Get all medicines
