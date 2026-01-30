@@ -18,6 +18,7 @@ const Navigation = () => {
       { path: '/treatment', label: 'Treatment', icon: '💊', roles: ['Super User', 'Admin'] },
       { path: '/feeding', label: 'Feeding', icon: '🍲', roles: ['Super User', 'Caretaker'] },
       { path: '/release', label: 'Release', icon: '✅', roles: ['Super User', 'Catcher', 'Caretaker'] },
+      { path: '/records', label: 'Records', icon: '📑', roles: ['Super User', 'Admin'] },
       { path: '/medicines', label: 'Medicines', icon: '💊', roles: ['Super User', 'Admin'] },
       { path: '/food-stock', label: 'Food Stock', icon: '🍞', roles: ['Super User', 'Admin'] },
       { path: '/users', label: 'Users', icon: '👥', roles: ['Super User', 'Admin'] },
