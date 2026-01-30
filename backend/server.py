@@ -944,9 +944,17 @@ async def get_medicine_usage_report(
     else:
         raise HTTPException(status_code=400, detail="Invalid period. Use 'month', 'week', or 'custom'")
     
-    # Get all logs in the period - filter by user-provided 'date' field, not 'created_at'
+    # Get all logs in the period - filter by user-provided 'date' field
+    # Handle both datetime formats: "YYYY-MM-DD HH:MM:SS" and "YYYY-MM-DDTHH:MM:SS"
+    # We use $or to match both formats
+    start_with_space = start.replace("T", " ")
+    end_with_space = end.replace("T", " ")
+    
     logs = await db.medicine_logs.find({
-        "date": {"$gte": start, "$lte": end}
+        "$or": [
+            {"date": {"$gte": start, "$lte": end}},
+            {"date": {"$gte": start_with_space, "$lte": end_with_space}}
+        ]
     }, {"_id": 0}).to_list(None)
     
     # Get all medicines
