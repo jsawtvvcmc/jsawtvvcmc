@@ -120,14 +120,19 @@ const Reports = () => {
       const photoLinks = c.catching?.photo_links || [];
       let photoHtml = '';
       
+      console.log(`Case ${c.case_number} photos:`, photoLinks); // Debug
+      
       if (photoLinks.length > 0) {
         photoLinks.slice(0, 2).forEach(photo => {
           const imgUrl = getPhotoUrl(photo);
+          console.log(`Photo URL: ${imgUrl}`); // Debug
           if (imgUrl) {
-            photoHtml += '<img src="' + imgUrl + '" class="case-image" alt="Photo" onerror="this.style.display=\'none\'">';
+            photoHtml += '<img src="' + imgUrl + '" class="case-image" alt="Photo" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.style.opacity=\'0.3\'; this.alt=\'Image loading...\'">';
           }
         });
-      } else {
+      }
+      
+      if (!photoHtml) {
         photoHtml = '<div class="no-image">No Photo</div>';
       }
 
