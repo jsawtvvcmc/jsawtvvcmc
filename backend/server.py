@@ -783,6 +783,46 @@ async def add_medicine_stock(
     
     return {"message": "Stock added successfully", "quantity": stock_data.quantity}
 
+@api_router.put("/medicines/{medicine_id}")
+async def update_medicine(
+    medicine_id: str,
+    medicine_data: dict,
+    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+):
+    """Update medicine details (name, generic_name, unit, packing, packing_size)"""
+    # Fields that can be updated
+    allowed_fields = ["name", "generic_name", "unit", "packing", "packing_size"]
+    update_data = {k: v for k, v in medicine_data.items() if k in allowed_fields}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    # Add updated timestamp
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.medicines.update_one(
+        {"id": medicine_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Medicine not found")
+    
+    return {"message": "Medicine updated successfully"}
+
+@api_router.delete("/medicines/{medicine_id}")
+async def delete_medicine(
+    medicine_id: str,
+    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+):
+    """Delete a medicine"""
+    result = await db.medicines.delete_one({"id": medicine_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Medicine not found")
+    
+    return {"message": "Medicine deleted successfully"}
+
 # ==================== FOOD MANAGEMENT ====================
 from models import FoodItem, FoodItemCreate, FoodStockAdd
 
