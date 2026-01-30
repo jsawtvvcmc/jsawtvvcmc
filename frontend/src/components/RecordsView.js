@@ -113,7 +113,7 @@ const RecordsView = ({ recordType, title, fields }) => {
       const recordDate = new Date(getRecordDate(record));
       return recordDate >= startDate && recordDate <= endDate;
     });
-  }, [records, recordType, periodType, selectedMonth, customStartDate, customEndDate]);
+  }, [records, recordType, periodType, selectedMonth, customStartDate, customEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Paginate records
   const paginatedRecords = useMemo(() => {
