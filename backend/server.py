@@ -939,9 +939,9 @@ async def get_medicine_usage_report(
     else:
         raise HTTPException(status_code=400, detail="Invalid period. Use 'month', 'week', or 'custom'")
     
-    # Get all logs in the period
+    # Get all logs in the period - filter by user-provided 'date' field, not 'created_at'
     logs = await db.medicine_logs.find({
-        "created_at": {"$gte": start, "$lte": end}
+        "date": {"$gte": start, "$lte": end}
     }, {"_id": 0}).to_list(None)
     
     # Get all medicines
