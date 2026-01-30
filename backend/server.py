@@ -1426,9 +1426,9 @@ async def add_daily_treatment(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     
-    # Upload photos to Google Drive (Post-op-care)
+    # Upload photos to Google Drive (Post-op-care) using current user's credentials
     photo_links = []
-    drive_uploader = await get_drive_uploader(db)
+    drive_uploader = await get_drive_uploader_for_user(db, current_user)
     
     if drive_uploader and data.get("photos"):
         treatment_date = datetime.fromisoformat(data.get("date", datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')) if data.get("date") else datetime.now(timezone.utc)
@@ -1444,6 +1444,14 @@ async def add_daily_treatment(
                 )
                 if result:
                     photo_links.append(result)
+        
+        # Update user's credentials if refreshed
+        updated_creds = drive_uploader.get_updated_credentials()
+        if updated_creds.get("access_token") != drive_uploader.creds_data.get("access_token"):
+            await db.users.update_one(
+                {"id": current_user["id"]},
+                {"$set": {"google_drive_credentials": updated_creds}}
+            )
     
     treatment = {
         "id": str(uuid.uuid4()),
