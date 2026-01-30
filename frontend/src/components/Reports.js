@@ -209,23 +209,28 @@ const Reports = () => {
     // Get photo links
     const catchingPhotos = caseData.catching?.photo_links || [];
     const surgeryPhotos = caseData.surgery?.photo_links || [];
+    
+    console.log('Case Paper - Catching photos:', catchingPhotos); // Debug
+    console.log('Case Paper - Surgery photos:', surgeryPhotos); // Debug
 
     // Build photo HTML
     let photosHtml = '';
     catchingPhotos.slice(0, 2).forEach((photo, idx) => {
       const url = getPhotoUrl(photo);
+      console.log(`Catching photo ${idx} URL:`, url); // Debug
       if (url) {
-        photosHtml += '<div class="photo-item"><img src="' + url + '" class="photo-img" alt="Catching Photo" onerror="this.style.display=\'none\'"><div class="photo-label">Catching Photo ' + (idx + 1) + '</div></div>';
+        photosHtml += '<div class="photo-item"><img src="' + url + '" class="photo-img" alt="Catching Photo" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.style.opacity=\'0.3\'"><div class="photo-label">Catching Photo ' + (idx + 1) + '</div></div>';
       }
     });
     surgeryPhotos.slice(0, 2).forEach((photo, idx) => {
       const url = getPhotoUrl(photo);
+      console.log(`Surgery photo ${idx} URL:`, url); // Debug
       if (url) {
-        photosHtml += '<div class="photo-item"><img src="' + url + '" class="photo-img" alt="Surgery Photo" onerror="this.style.display=\'none\'"><div class="photo-label">Surgery Photo ' + (idx + 1) + '</div></div>';
+        photosHtml += '<div class="photo-item"><img src="' + url + '" class="photo-img" alt="Surgery Photo" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.style.opacity=\'0.3\'"><div class="photo-label">Surgery Photo ' + (idx + 1) + '</div></div>';
       }
     });
 
-    const hasPhotos = catchingPhotos.length > 0 || surgeryPhotos.length > 0;
+    const hasPhotos = photosHtml.length > 0;
 
     // Get medicines used
     const medicines = caseData.surgery?.medicines_used || caseData.surgery?.medicines || {};
