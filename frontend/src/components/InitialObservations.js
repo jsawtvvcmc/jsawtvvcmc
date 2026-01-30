@@ -211,21 +211,24 @@ const InitialObservations = () => {
 
             {/* Gender */}
             <div>
-              <Label>Gender *</Label>
+              <Label className="mb-2 block">Gender * <span className="text-red-500">(Required)</span></Label>
               <RadioGroup 
                 value={formData.gender} 
                 onValueChange={(value) => setFormData({...formData, gender: value})}
-                className="flex space-x-4"
+                className="flex space-x-6"
               >
-                <div className="flex items-center space-x-2">
+                <div className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.gender === 'Male' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
                   <RadioGroupItem value="Male" id="male" />
-                  <Label htmlFor="male">Male</Label>
+                  <Label htmlFor="male" className="cursor-pointer font-medium">♂ Male</Label>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className={`flex items-center space-x-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.gender === 'Female' ? 'border-pink-500 bg-pink-50' : 'border-gray-200 hover:border-gray-300'}`}>
                   <RadioGroupItem value="Female" id="female" />
-                  <Label htmlFor="female">Female</Label>
+                  <Label htmlFor="female" className="cursor-pointer font-medium">♀ Female</Label>
                 </div>
               </RadioGroup>
+              {!formData.gender && (
+                <p className="text-sm text-orange-600 mt-2">⚠️ Please select Male or Female</p>
+              )}
             </div>
 
             {/* Age */}
