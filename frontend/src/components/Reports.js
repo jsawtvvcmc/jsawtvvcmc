@@ -66,11 +66,39 @@ const Reports = () => {
     });
   };
 
-  // Get Google Drive image URL from file ID
-  const getDriveImageUrl = (fileId) => {
-    if (!fileId) return null;
-    // Use Google Drive thumbnail URL
-    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+  // Get Google Drive image URL from photo object or file ID
+  const getDriveImageUrl = (photo) => {
+    if (!photo) return null;
+    
+    // If it's an object with file_id (new format)
+    if (typeof photo === 'object' && photo.file_id) {
+      // Use direct link or construct thumbnail URL
+      return `https://drive.google.com/thumbnail?id=${photo.file_id}&sz=w400`;
+    }
+    
+    // If it's a string (old format - just file ID)
+    if (typeof photo === 'string') {
+      return `https://drive.google.com/thumbnail?id=${photo}&sz=w400`;
+    }
+    
+    return null;
+  };
+
+  // Get direct viewable link for printing
+  const getDriveDirectUrl = (photo) => {
+    if (!photo) return null;
+    
+    if (typeof photo === 'object') {
+      // Use the direct_link if available, otherwise construct from file_id
+      if (photo.direct_link) return photo.direct_link;
+      if (photo.file_id) return `https://drive.google.com/uc?export=view&id=${photo.file_id}`;
+    }
+    
+    if (typeof photo === 'string') {
+      return `https://drive.google.com/uc?export=view&id=${photo}`;
+    }
+    
+    return null;
   };
 
   // 1. Catching Sheet Report
