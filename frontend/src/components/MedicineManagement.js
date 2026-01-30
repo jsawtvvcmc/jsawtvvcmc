@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import axios from 'axios';
+import { Pencil, X, Check } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -17,6 +18,7 @@ const MedicineManagement = () => {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [editingMedicine, setEditingMedicine] = useState(null);
   
   const [newMedicine, setNewMedicine] = useState({
     name: '',
@@ -99,6 +101,44 @@ const MedicineManagement = () => {
     }
   };
 
+  const startEditing = (medicine) => {
+    setEditingMedicine({
+      ...medicine,
+      packing_size: medicine.packing_size?.toString() || ''
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingMedicine(null);
+  };
+
+  const handleUpdateMedicine = async () => {
+    if (!editingMedicine) return;
+    
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      await axios.put(`${API}/medicines/${editingMedicine.id}`, {
+        name: editingMedicine.name,
+        generic_name: editingMedicine.generic_name,
+        unit: editingMedicine.unit,
+        packing: editingMedicine.packing,
+        packing_size: parseFloat(editingMedicine.packing_size) || 0
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: 'Medicine updated successfully!' });
+      setEditingMedicine(null);
+      fetchMedicines();
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to update medicine' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -107,8 +147,11 @@ const MedicineManagement = () => {
       </div>
 
       {message.text && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
-          <AlertDescription>{message.text}</AlertDescription>
+        <Alert variant={message.type === 'error' ? 'destructive' : 'default'} 
+               className={message.type === 'success' ? 'border-green-500 bg-green-50' : ''}>
+          <AlertDescription className={message.type === 'success' ? 'text-green-800' : ''}>
+            {message.text}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -123,34 +166,137 @@ const MedicineManagement = () => {
           <Card>
             <CardHeader>
               <CardTitle>Medicine Inventory ({medicines.length})</CardTitle>
+              <CardDescription>Click the edit icon to modify medicine details</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Name</th>
-                      <th className="text-left p-2">Generic Name</th>
-                      <th className="text-left p-2">Unit</th>
-                      <th className="text-left p-2">Packing</th>
-                      <th className="text-left p-2">Size</th>
-                      <th className="text-left p-2">Current Stock</th>
+                    <tr className="border-b bg-gray-50">
+                      <th className="text-left p-3">Name</th>
+                      <th className="text-left p-3">Generic Name</th>
+                      <th className="text-left p-3">Unit</th>
+                      <th className="text-left p-3">Packing</th>
+                      <th className="text-left p-3">Size</th>
+                      <th className="text-left p-3">Stock</th>
+                      <th className="text-left p-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {medicines.map((med) => (
                       <tr key={med.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2 font-medium">{med.name}</td>
-                        <td className="p-2">{med.generic_name || '-'}</td>
-                        <td className="p-2">{med.unit}</td>
-                        <td className="p-2">{med.packing}</td>
-                        <td className="p-2">{med.packing_size}</td>
-                        <td className="p-2">
-                          <span className={`font-bold ${med.current_stock < 10 ? 'text-red-600' : 'text-green-600'}`}>
-                            {med.current_stock}
-                            {med.current_stock < 10 && ' ⚠️'}
-                          </span>
-                        </td>
+                        {editingMedicine?.id === med.id ? (
+                          // Editing mode
+                          <>
+                            <td className="p-2">
+                              <Input
+                                value={editingMedicine.name}
+                                onChange={(e) => setEditingMedicine({...editingMedicine, name: e.target.value})}
+                                className="h-8"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <Input
+                                value={editingMedicine.generic_name || ''}
+                                onChange={(e) => setEditingMedicine({...editingMedicine, generic_name: e.target.value})}
+                                className="h-8"
+                                placeholder="Generic name"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <Select 
+                                value={editingMedicine.unit}
+                                onValueChange={(value) => setEditingMedicine({...editingMedicine, unit: value})}
+                              >
+                                <SelectTrigger className="h-8 w-20">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Ml">Ml</SelectItem>
+                                  <SelectItem value="Mg">Mg</SelectItem>
+                                  <SelectItem value="Pcs">Pcs</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="p-2">
+                              <Select 
+                                value={editingMedicine.packing}
+                                onValueChange={(value) => setEditingMedicine({...editingMedicine, packing: value})}
+                              >
+                                <SelectTrigger className="h-8 w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Bottle">Bottle</SelectItem>
+                                  <SelectItem value="Vial">Vial</SelectItem>
+                                  <SelectItem value="Pack">Pack</SelectItem>
+                                  <SelectItem value="Ampoule">Ampoule</SelectItem>
+                                  <SelectItem value="Tube">Tube</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="p-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editingMedicine.packing_size}
+                                onChange={(e) => setEditingMedicine({...editingMedicine, packing_size: e.target.value})}
+                                className="h-8 w-20"
+                              />
+                            </td>
+                            <td className="p-2">
+                              <span className={`font-bold ${med.current_stock < 10 ? 'text-red-600' : 'text-green-600'}`}>
+                                {med.current_stock}
+                              </span>
+                            </td>
+                            <td className="p-2">
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={handleUpdateMedicine}
+                                  disabled={loading}
+                                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={cancelEditing}
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          // View mode
+                          <>
+                            <td className="p-3 font-medium">{med.name}</td>
+                            <td className="p-3 text-gray-600">{med.generic_name || '-'}</td>
+                            <td className="p-3">{med.unit}</td>
+                            <td className="p-3">{med.packing}</td>
+                            <td className="p-3">{med.packing_size}</td>
+                            <td className="p-3">
+                              <span className={`font-bold ${med.current_stock < 10 ? 'text-red-600' : 'text-green-600'}`}>
+                                {med.current_stock}
+                                {med.current_stock < 10 && ' ⚠️'}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => startEditing(med)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -185,6 +331,7 @@ const MedicineManagement = () => {
                     id="generic_name"
                     value={newMedicine.generic_name}
                     onChange={(e) => setNewMedicine({...newMedicine, generic_name: e.target.value})}
+                    placeholder="e.g., Meloxicam, Ketamine HCl"
                   />
                 </div>
 
@@ -219,6 +366,8 @@ const MedicineManagement = () => {
                         <SelectItem value="Bottle">Bottle</SelectItem>
                         <SelectItem value="Vial">Vial</SelectItem>
                         <SelectItem value="Pack">Pack</SelectItem>
+                        <SelectItem value="Ampoule">Ampoule</SelectItem>
+                        <SelectItem value="Tube">Tube</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -232,6 +381,7 @@ const MedicineManagement = () => {
                       value={newMedicine.packing_size}
                       onChange={(e) => setNewMedicine({...newMedicine, packing_size: e.target.value})}
                       required
+                      placeholder="e.g., 30, 100"
                     />
                   </div>
                 </div>
