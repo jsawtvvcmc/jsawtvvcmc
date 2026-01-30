@@ -343,22 +343,12 @@ const Reports = () => {
   </div>
 
   <!-- Photos Section -->
-  ${(catchingPhotos.length > 0 || surgeryPhotos.length > 0) ? `
+  ${hasPhotos ? `
   <div class="section">
     <div class="section-title">PHOTOGRAPHS</div>
     <div class="photos-section">
-      ${catchingPhotos.slice(0, 2).map((id, idx) => `
-        <div class="photo-item">
-          <img src="${getDriveImageUrl(id)}" class="photo-img" alt="Catching Photo ${idx + 1}" onerror="this.style.display='none'">
-          <div class="photo-label">Catching Photo ${idx + 1}</div>
-        </div>
-      `).join('')}
-      ${surgeryPhotos.slice(0, 2).map((id, idx) => `
-        <div class="photo-item">
-          <img src="${getDriveImageUrl(id)}" class="photo-img" alt="Surgery Photo ${idx + 1}" onerror="this.style.display='none'">
-          <div class="photo-label">Surgery Photo ${idx + 1}</div>
-        </div>
-      `).join('')}
+      ${catchingPhotoHtml}
+      ${surgeryPhotoHtml}
     </div>
   </div>
   ` : ''}
