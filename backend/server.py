@@ -1063,11 +1063,20 @@ from models import Medicine, MedicineCreate, MedicineStockAdd
 @api_router.post("/medicines", response_model=Medicine)
 async def create_medicine(
     medicine_data: MedicineCreate,
+    project_id: str = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a new medicine"""
+    """Create a new medicine for a project"""
+    # Determine project_id
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if not project_id:
+            raise HTTPException(status_code=400, detail="project_id required for Super Admin")
+    else:
+        project_id = current_user.get("project_id")
+    
     medicine_dict = medicine_data.model_dump()
     medicine_dict["id"] = str(uuid.uuid4())
+    medicine_dict["project_id"] = project_id
     medicine_dict["current_stock"] = 0.0
     medicine_dict["created_at"] = datetime.now(timezone.utc).isoformat()
     
@@ -1076,9 +1085,22 @@ async def create_medicine(
     return Medicine(**medicine_dict)
 
 @api_router.get("/medicines", response_model=List[Medicine])
-async def get_medicines(current_user: dict = Depends(get_current_user)):
-    """Get all medicines"""
-    medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+async def get_medicines(
+    project_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get medicines - filtered by project"""
+    query = {}
+    
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if project_id:
+            query["project_id"] = project_id
+    else:
+        user_project_id = current_user.get("project_id")
+        if user_project_id:
+            query["project_id"] = user_project_id
+    
+    medicines = await db.medicines.find(query, {"_id": 0}).to_list(None)
     for med in medicines:
         if isinstance(med.get('created_at'), str):
             med['created_at'] = datetime.fromisoformat(med['created_at'])
@@ -1094,6 +1116,11 @@ async def add_medicine_stock(
     medicine = await db.medicines.find_one({"id": stock_data.medicine_id}, {"_id": 0})
     if not medicine:
         raise HTTPException(status_code=404, detail="Medicine not found")
+    
+    # Check project access
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if medicine.get("project_id") != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied")
     
     packing_size = medicine.get("packing_size", 1)
     
