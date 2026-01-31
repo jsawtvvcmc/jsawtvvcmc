@@ -196,7 +196,46 @@ const Reports = () => {
     const printWindow = window.open('', '_blank');
     printWindow.document.write(html);
     printWindow.document.close();
-    setTimeout(() => printWindow.print(), 500);
+    
+    // Wait for images to load before printing
+    const images = printWindow.document.querySelectorAll('img');
+    let loadedCount = 0;
+    const totalImages = images.length;
+    
+    if (totalImages === 0) {
+      setTimeout(() => printWindow.print(), 500);
+    } else {
+      images.forEach(img => {
+        if (img.complete) {
+          loadedCount++;
+          if (loadedCount === totalImages) {
+            setTimeout(() => printWindow.print(), 500);
+          }
+        } else {
+          img.onload = () => {
+            loadedCount++;
+            if (loadedCount === totalImages) {
+              setTimeout(() => printWindow.print(), 500);
+            }
+          };
+          img.onerror = () => {
+            loadedCount++;
+            console.error('Failed to load image:', img.src);
+            if (loadedCount === totalImages) {
+              setTimeout(() => printWindow.print(), 500);
+            }
+          };
+        }
+      });
+      
+      // Fallback: print after 5 seconds regardless
+      setTimeout(() => {
+        if (loadedCount < totalImages) {
+          console.warn('Printing before all images loaded');
+          printWindow.print();
+        }
+      }, 5000);
+    }
   };
 
   // 2. Case Paper Report
@@ -322,7 +361,46 @@ const Reports = () => {
     const printWindow = window.open('', '_blank');
     printWindow.document.write(html);
     printWindow.document.close();
-    setTimeout(() => printWindow.print(), 500);
+    
+    // Wait for images to load before printing
+    const images = printWindow.document.querySelectorAll('img');
+    let loadedCount = 0;
+    const totalImages = images.length;
+    
+    if (totalImages === 0) {
+      setTimeout(() => printWindow.print(), 500);
+    } else {
+      images.forEach(img => {
+        if (img.complete) {
+          loadedCount++;
+          if (loadedCount === totalImages) {
+            setTimeout(() => printWindow.print(), 500);
+          }
+        } else {
+          img.onload = () => {
+            loadedCount++;
+            if (loadedCount === totalImages) {
+              setTimeout(() => printWindow.print(), 500);
+            }
+          };
+          img.onerror = () => {
+            loadedCount++;
+            console.error('Failed to load image:', img.src);
+            if (loadedCount === totalImages) {
+              setTimeout(() => printWindow.print(), 500);
+            }
+          };
+        }
+      });
+      
+      // Fallback: print after 5 seconds regardless
+      setTimeout(() => {
+        if (loadedCount < totalImages) {
+          console.warn('Printing before all images loaded');
+          printWindow.print();
+        }
+      }, 5000);
+    }
   };
 
   // 3. Monthly Log Excel Export
