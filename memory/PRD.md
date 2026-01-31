@@ -2,12 +2,57 @@
 ## Product Requirements Document
 
 ### Overview
-Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a comprehensive system to manage the entire workflow of animal sterilization programs.
+Animal Birth Control (ABC) Program Management System for **Janice Smith Animal Welfare Trust** - a comprehensive multi-project system to manage the entire workflow of animal sterilization programs across multiple cities/projects.
 
 ### Organization Details
 - **Organization:** Janice Smith Animal Welfare Trust
-- **Project:** Talegaon ABC Project
-- **Address:** 352, Vadgaon, Yashwant Nagar, Talegaon Dabhade, Maharashtra 410507, India
+- **Organization Code:** JS (2 letters)
+- **Multi-Project Architecture:** Each city/municipal corporation runs as independent project
+
+---
+
+## Multi-Project Architecture (NEW - Jan 31, 2026)
+
+### Project Structure
+- **Super Admin**: Global access to all projects
+- **Project-specific users**: Each project has independent users (no sharing)
+- **URL Format**: `j-app.in/{project-code}/` (e.g., `j-app.in/vvc/`, `j-app.in/tal/`)
+- **Project Code**: 3 letters (e.g., VVC, TAL)
+
+### Project Creation
+When Super Admin creates a project:
+1. Organization name (default: Janice Smith Animal Welfare Trust)
+2. Organization logo (upload)
+3. Project name (e.g., "Vasai Virar Municipal Corporation ABC Project")
+4. Project logo (upload)
+5. Project code (3 letters, e.g., "VVC")
+6. Admin user (name, email, password)
+
+### Case Number Format
+`JS-{PROJECT}-{MONTH}-{TYPE}{SEQUENCE}`
+- Example: `JS-VVC-JAN-C0001` (Catching)
+- Example: `JS-VVC-JAN-S0001` (Surgery)
+
+### Google Drive Structure
+```
+{PROJECT}/Catching/Year/Month/A/{case-number}.jpg
+{PROJECT}/Catching/Year/Month/B/{case-number}.jpg
+
+Example:
+VVC/Catching/2026/Jan/A/JS-VVC-JAN-C0001.jpg
+VVC/Surgery/2026/Jan/A/JS-VVC-JAN-C0001.jpg
+```
+
+### Database Collections (per project)
+All collections filtered by `project_id`:
+- `cases` - Animal cases
+- `users` - Project users
+- `medicines` - Medicine inventory
+- `food_items` - Food inventory
+- `kennels` - Kennel status
+- `medicine_logs` - Usage tracking
+
+---
 
 ### Tech Stack
 - **Frontend:** React, Tailwind CSS, Shadcn/UI
@@ -16,8 +61,8 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 - **Authentication:** JWT
 
 ### User Roles (6 roles)
-1. Super User
-2. Admin
+1. Super Admin (Global - access all projects)
+2. Admin (Project-level)
 3. Driver
 4. Catcher
 5. Veterinary Doctor
@@ -25,7 +70,7 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 
 ---
 
-## What's Been Implemented (as of Jan 28, 2026)
+## What's Been Implemented (as of Jan 31, 2026)
 
 ### Core Features ✅
 - [x] User authentication (JWT-based login/logout)
@@ -36,17 +81,27 @@ Animal Birth Control (ABC) Program Management System for **Janice's Trust** - a 
 - [x] **Google Drive Integration** (Jan 28, 2026) - OAuth-based image storage with folder hierarchy
 - [x] **Multi-User Google Drive** (Jan 30, 2026) - Per-user Drive credentials, each user connects their own account
 
+### Multi-Project Architecture ✅ (Jan 31, 2026)
+- [x] Project model with all required fields
+- [x] User model updated with project_id
+- [x] Drive uploader updated for project-based folders
+- [x] Month names in folder paths (Jan, Feb, etc.)
+- [ ] Project creation API endpoints (in progress)
+- [ ] Frontend routing for projects (pending)
+- [ ] Project creation wizard UI (pending)
+
 ### Forms & Workflows ✅
 - [x] **Catching Form** - GPS extraction from photo EXIF data, photo upload with camera option
 - [x] **Initial Observations** - Kennel assignment, animal assessment
 - [x] **Surgery Form** - Auto-calculated medicine dosages (18 medicines), all fields visible and editable
-- [x] **Daily Treatment** - Post-surgery care logging
+- [x] **Daily Treatment** - Post-surgery care logging with standard protocol
 - [x] **Daily Feeding** - Meal tracking
 - [x] **Release Form** - Animal release documentation
 - [x] **User Management** - CRUD for users
-- [x] **Medicine Management** - Inventory tracking
+- [x] **Medicine Management** - Inventory tracking with usage reports
 - [x] **Food Stock Management** - Food inventory
-- [x] **Bulk Upload** ✅ NEW (Jan 28, 2026) - Import Catching & Surgery records via Excel
+- [x] **Bulk Upload** ✅ (Jan 28, 2026) - Import Catching & Surgery records via Excel
+- [x] **Records View** ✅ (Jan 31, 2026) - View all records with pagination and date filters
 
 ### Auto Medicine Calculation ✅ NEW (Jan 28, 2026)
 - [x] Medicine protocol with weight-based dosage rules
