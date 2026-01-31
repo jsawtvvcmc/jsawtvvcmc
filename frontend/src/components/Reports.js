@@ -67,7 +67,7 @@ const Reports = () => {
   };
 
   // Get Google Drive image URL from photo object or file ID
-  // Using lh3.googleusercontent.com format which works better for embedding
+  // Using lh3.googleusercontent.com format which works for embedding and has CORS headers
   const getPhotoUrl = (photo) => {
     if (!photo) return '';
     
@@ -78,6 +78,10 @@ const Reports = () => {
       fileId = photo.file_id;
       if (!fileId && photo.web_view_link) {
         const match = photo.web_view_link.match(/\/d\/([^/]+)/);
+        if (match) fileId = match[1];
+      }
+      if (!fileId && photo.direct_link) {
+        const match = photo.direct_link.match(/id=([^&]+)/);
         if (match) fileId = match[1];
       }
     } else if (typeof photo === 'string') {
@@ -94,9 +98,8 @@ const Reports = () => {
     
     if (!fileId) return '';
     
-    // Use Google's export view URL which works for embedded images
-    // Adding export=view helps with embedding
-    return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    // Use lh3.googleusercontent.com format - works with CORS and embedding
+    return `https://lh3.googleusercontent.com/d/${fileId}=w400`;
   };
 
   // 1. Catching Sheet Report
