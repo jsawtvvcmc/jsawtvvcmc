@@ -151,7 +151,7 @@ const UserManagement = () => {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Super User">Super User</SelectItem>
+                    <SelectItem value="Super Admin">Super Admin</SelectItem>
                     <SelectItem value="Admin">Admin</SelectItem>
                     <SelectItem value="Driver">Driver</SelectItem>
                     <SelectItem value="Catcher">Catcher</SelectItem>

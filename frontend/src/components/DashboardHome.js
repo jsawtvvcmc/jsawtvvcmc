@@ -121,25 +121,25 @@ const DashboardHome = () => {
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {user?.role === 'Driver' || user?.role === 'Super User' ? (
+            {user?.role === 'Driver' || user?.role === 'Super Admin' ? (
               <a href="/catching" className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors text-center">
                 <div className="text-3xl mb-2">🚗</div>
                 <p className="font-medium text-gray-900">New Catching</p>
               </a>
             ) : null}
-            {user?.role === 'Catcher' || user?.role === 'Super User' ? (
+            {user?.role === 'Catcher' || user?.role === 'Super Admin' ? (
               <a href="/observations" className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-center">
                 <div className="text-3xl mb-2">📋</div>
                 <p className="font-medium text-gray-900">Add Observation</p>
               </a>
             ) : null}
-            {user?.role === 'Veterinary Doctor' || user?.role === 'Super User' ? (
+            {user?.role === 'Veterinary Doctor' || user?.role === 'Super Admin' ? (
               <a href="/surgery" className="p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-center">
                 <div className="text-3xl mb-2">⚕️</div>
                 <p className="font-medium text-gray-900">Surgery Form</p>
               </a>
             ) : null}
-            {user?.role === 'Admin' || user?.role === 'Super User' ? (
+            {user?.role === 'Admin' || user?.role === 'Super Admin' ? (
               <a href="/treatment" className="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors text-center">
                 <div className="text-3xl mb-2">💊</div>
                 <p className="font-medium text-gray-900">Daily Treatment</p>
