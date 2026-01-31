@@ -11,20 +11,20 @@ const Navigation = () => {
 
   const getNavigationItems = (role) => {
     const allItems = [
-      { path: '/dashboard', label: 'Dashboard', icon: '🏠', roles: ['Super User', 'Admin', 'Driver', 'Catcher', 'Veterinary Doctor', 'Caretaker'] },
-      { path: '/catching', label: 'Catching', icon: '🚗', roles: ['Super User', 'Driver'] },
-      { path: '/observations', label: 'Observations', icon: '📋', roles: ['Super User', 'Catcher'] },
-      { path: '/surgery', label: 'Surgery', icon: '⚕️', roles: ['Super User', 'Veterinary Doctor'] },
-      { path: '/treatment', label: 'Treatment', icon: '💊', roles: ['Super User', 'Admin'] },
-      { path: '/feeding', label: 'Feeding', icon: '🍲', roles: ['Super User', 'Caretaker'] },
-      { path: '/release', label: 'Release', icon: '✅', roles: ['Super User', 'Catcher', 'Caretaker'] },
-      { path: '/records', label: 'Records', icon: '📑', roles: ['Super User', 'Admin'] },
-      { path: '/medicines', label: 'Medicines', icon: '💊', roles: ['Super User', 'Admin'] },
-      { path: '/food-stock', label: 'Food Stock', icon: '🍞', roles: ['Super User', 'Admin'] },
-      { path: '/users', label: 'Users', icon: '👥', roles: ['Super User', 'Admin'] },
-      { path: '/reports', label: 'Reports', icon: '📄', roles: ['Super User', 'Admin'] },
-      { path: '/bulk-upload', label: 'Bulk Upload', icon: '📊', roles: ['Super User', 'Admin'] },
-      { path: '/settings', label: 'Settings', icon: '⚙️', roles: ['Super User', 'Admin'] },
+      { path: '/dashboard', label: 'Dashboard', icon: '🏠', roles: ['Super Admin', 'Admin', 'Driver', 'Catcher', 'Veterinary Doctor', 'Caretaker'] },
+      { path: '/catching', label: 'Catching', icon: '🚗', roles: ['Super Admin', 'Admin', 'Driver'] },
+      { path: '/observations', label: 'Observations', icon: '📋', roles: ['Super Admin', 'Admin', 'Catcher'] },
+      { path: '/surgery', label: 'Surgery', icon: '⚕️', roles: ['Super Admin', 'Admin', 'Veterinary Doctor'] },
+      { path: '/treatment', label: 'Treatment', icon: '💊', roles: ['Super Admin', 'Admin'] },
+      { path: '/feeding', label: 'Feeding', icon: '🍲', roles: ['Super Admin', 'Admin', 'Caretaker'] },
+      { path: '/release', label: 'Release', icon: '✅', roles: ['Super Admin', 'Admin', 'Catcher', 'Caretaker'] },
+      { path: '/records', label: 'Records', icon: '📑', roles: ['Super Admin', 'Admin'] },
+      { path: '/medicines', label: 'Medicines', icon: '💊', roles: ['Super Admin', 'Admin'] },
+      { path: '/food-stock', label: 'Food Stock', icon: '🍞', roles: ['Super Admin', 'Admin'] },
+      { path: '/users', label: 'Users', icon: '👥', roles: ['Super Admin', 'Admin'] },
+      { path: '/reports', label: 'Reports', icon: '📄', roles: ['Super Admin', 'Admin'] },
+      { path: '/bulk-upload', label: 'Bulk Upload', icon: '📊', roles: ['Super Admin', 'Admin'] },
+      { path: '/settings', label: 'Settings', icon: '⚙️', roles: ['Super Admin', 'Admin'] },
     ];
     
     return allItems.filter(item => item.roles.includes(role));
