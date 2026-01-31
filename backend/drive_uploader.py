@@ -139,7 +139,8 @@ class DriveUploader:
         form_type: str,
         case_number: str,
         date: datetime = None,
-        photo_index: int = 0
+        photo_index: int = 0,
+        project_code: str = None
     ) -> Optional[Dict]:
         """
         Upload an image to Google Drive with proper folder structure
@@ -147,19 +148,20 @@ class DriveUploader:
         Args:
             base64_data: Base64 encoded image
             form_type: One of 'Catching', 'Surgery', 'Release', 'Feeding', 'Post-op-care', 'Config-files'
-            case_number: Case number (e.g., JS-TAL-JAN-C0001)
+            case_number: Case number (e.g., JS-VVC-JAN-C0001)
             date: Date for the photo (defaults to now)
             photo_index: 0=A (first), 1=B (second), 2=C (third), 3=D (fourth)
+            project_code: 3-letter project code (e.g., VVC, TAL)
             
         Folder Structure:
-            FormType/Year/Month/A/{case-number}.jpg (first photo)
-            FormType/Year/Month/B/{case-number}.jpg (second photo)
-            FormType/Year/Month/C/{case-number}.jpg (third photo)
-            FormType/Year/Month/D/{case-number}.jpg (fourth photo)
+            ProjectCode/FormType/Year/Month/A/{case-number}.jpg (first photo)
+            Example: VVC/Catching/2026/Jan/A/JS-VVC-JAN-C0001.jpg
             
         Returns:
             Dict with file_id, direct_link, filename, folder_path
         """
+        import calendar
+        
         if not self.service:
             logger.error("Google Drive service not initialized")
             return None
@@ -172,8 +174,8 @@ class DriveUploader:
                 folder_id = self._get_or_create_folder('Config-files', self.root_folder_id)
                 filename = f"{case_number}.jpg"  # case_number here is actually the config file name
             else:
-                # Build folder path: FormType/Year/Month/A (or B/C/D)
-                folder_id = self._build_folder_path(form_type, date, photo_index)
+                # Build folder path: ProjectCode/FormType/Year/Month/A (or B/C/D)
+                folder_id = self._build_folder_path(form_type, date, photo_index, project_code)
                 
                 # Generate filename: {case-number}.jpg
                 filename = self._generate_filename(case_number)
@@ -228,7 +230,13 @@ class DriveUploader:
             
             # Subfolder letter
             subfolder = ['A', 'B', 'C', 'D'][min(photo_index, 3)]
-            folder_path = f"{form_type}/{date.year}/{str(date.month).zfill(2)}/{subfolder}"
+            month_name = calendar.month_abbr[date.month]
+            
+            # Build folder path string
+            if project_code:
+                folder_path = f"{project_code.upper()}/{form_type}/{date.year}/{month_name}/{subfolder}"
+            else:
+                folder_path = f"{form_type}/{date.year}/{month_name}/{subfolder}"
             
             logger.info(f"Uploaded: {folder_path}/{filename}")
             
