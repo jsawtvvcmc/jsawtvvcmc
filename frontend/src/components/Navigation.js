@@ -12,6 +12,7 @@ const Navigation = () => {
   const getNavigationItems = (role) => {
     const allItems = [
       { path: '/dashboard', label: 'Dashboard', icon: '🏠', roles: ['Super Admin', 'Admin', 'Driver', 'Catcher', 'Veterinary Doctor', 'Caretaker'] },
+      { path: '/projects', label: 'Projects', icon: '🏢', roles: ['Super Admin'] },
       { path: '/catching', label: 'Catching', icon: '🚗', roles: ['Super Admin', 'Admin', 'Driver'] },
       { path: '/observations', label: 'Observations', icon: '📋', roles: ['Super Admin', 'Admin', 'Catcher'] },
       { path: '/surgery', label: 'Surgery', icon: '⚕️', roles: ['Super Admin', 'Admin', 'Veterinary Doctor'] },
