@@ -113,6 +113,7 @@ class User(BaseModel):
     last_name: str
     mobile: str
     role: UserRole
+    project_id: Optional[str] = None  # None for Super Admin (global access)
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -122,9 +123,55 @@ class UserCreate(BaseModel):
     last_name: str
     mobile: str
     role: UserRole
+    project_id: Optional[str] = None
 
 class UserInDB(User):
     password_hash: str
+
+# Project Models (Multi-Tenant)
+class Project(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    
+    # Organization Details
+    organization_name: str = "Janice Smith Animal Welfare Trust"
+    organization_shortcode: str = "JS"  # 2 letters
+    organization_logo_url: Optional[str] = None
+    
+    # Project Details
+    project_name: str  # e.g., "Vasai Virar Municipal Corporation ABC Project"
+    project_code: str  # 3 letters, e.g., "VVC"
+    project_logo_url: Optional[str] = None
+    project_address: Optional[str] = None
+    
+    # Settings
+    max_kennels: int = 300
+    status: ProjectStatus = ProjectStatus.ACTIVE
+    
+    # Google Drive
+    drive_folder_id: Optional[str] = None  # Root folder for this project
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ProjectCreate(BaseModel):
+    organization_name: str = "Janice Smith Animal Welfare Trust"
+    organization_shortcode: str = "JS"
+    organization_logo_base64: Optional[str] = None
+    project_name: str
+    project_code: str  # 3 letters
+    project_logo_base64: Optional[str] = None
+    project_address: Optional[str] = None
+    max_kennels: int = 300
+    
+    # Admin user for this project
+    admin_first_name: str
+    admin_last_name: str
+    admin_email: EmailStr
+    admin_mobile: str
+    admin_password: str
 
 # Medicine Models
 class Medicine(BaseModel):
