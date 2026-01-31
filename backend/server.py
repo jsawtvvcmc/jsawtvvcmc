@@ -744,7 +744,7 @@ async def test_drive_upload(current_user: dict = Depends(get_current_user)):
 @api_router.post("/users", response_model=User)
 async def create_user(
     user_data: UserCreate,
-    current_user: dict = Depends(lambda creds: require_roles([UserRole.SUPER_USER, UserRole.ADMIN])(creds))
+    current_user: dict = Depends(lambda creds: require_roles([UserRole.SUPER_ADMIN, UserRole.ADMIN])(creds))
 ):
     """Create a new user"""
     from utils import generate_password
@@ -754,12 +754,16 @@ async def create_user(
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
+    # For non-Super Admin, users must have a project_id
+    project_id = user_data.project_id if hasattr(user_data, 'project_id') else current_user.get("project_id")
+    
     # Generate password
     password = generate_password(user_data.first_name, user_data.mobile)
     
     # Create user
     user_dict = user_data.model_dump()
     user_dict["id"] = str(uuid.uuid4())
+    user_dict["project_id"] = project_id
     user_dict["password_hash"] = hash_password(password)
     user_dict["is_active"] = True
     user_dict["created_at"] = datetime.now(timezone.utc).isoformat()
@@ -773,14 +777,236 @@ async def create_user(
 
 @api_router.get("/users", response_model=List[User])
 async def get_users(
+    project_id: str = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get all users"""
-    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(None)
+    """Get users - filtered by project for non-Super Admin"""
+    query = {}
+    
+    # Super Admin can see all users or filter by project
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if project_id:
+            query["project_id"] = project_id
+    else:
+        # Non-Super Admin can only see users from their project
+        query["project_id"] = current_user.get("project_id")
+    
+    users = await db.users.find(query, {"_id": 0, "password_hash": 0}).to_list(None)
     for user in users:
         if isinstance(user.get('created_at'), str):
             user['created_at'] = datetime.fromisoformat(user['created_at'])
     return users
+
+# ==================== PROJECT MANAGEMENT ====================
+
+class ProjectCreateRequest(BaseModel):
+    """Request model for creating a new project"""
+    organization_name: str = "Janice Smith Animal Welfare Trust"
+    organization_shortcode: str = "JS"
+    organization_logo_base64: Optional[str] = None
+    project_name: str
+    project_code: str  # 3 letters
+    project_logo_base64: Optional[str] = None
+    project_address: Optional[str] = None
+    max_kennels: int = 300
+    
+    # Admin user for this project
+    admin_first_name: str
+    admin_last_name: str
+    admin_email: EmailStr
+    admin_mobile: str
+    admin_password: str
+
+@api_router.get("/projects")
+async def get_projects(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all projects - Super Admin only"""
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        # Non-Super Admin can only see their own project
+        project_id = current_user.get("project_id")
+        if project_id:
+            project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+            return [project] if project else []
+        return []
+    
+    projects = await db.projects.find({}, {"_id": 0}).to_list(None)
+    return projects
+
+@api_router.get("/projects/{project_code}")
+async def get_project_by_code(
+    project_code: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get project by code"""
+    project = await db.projects.find_one(
+        {"project_code": project_code.upper()}, 
+        {"_id": 0}
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Check access
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if current_user.get("project_id") != project["id"]:
+            raise HTTPException(status_code=403, detail="Access denied")
+    
+    return project
+
+@api_router.post("/projects")
+async def create_project(
+    project_data: ProjectCreateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new project - Super Admin only"""
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Only Super Admin can create projects")
+    
+    # Validate project code (3 letters)
+    project_code = project_data.project_code.upper().strip()
+    if len(project_code) != 3 or not project_code.isalpha():
+        raise HTTPException(status_code=400, detail="Project code must be exactly 3 letters")
+    
+    # Check if project code already exists
+    existing = await db.projects.find_one({"project_code": project_code})
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Project code '{project_code}' already exists")
+    
+    # Check if admin email already exists
+    existing_user = await db.users.find_one({"email": project_data.admin_email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail=f"Email '{project_data.admin_email}' already registered")
+    
+    # Create project
+    project_id = str(uuid.uuid4())
+    project = {
+        "id": project_id,
+        "organization_name": project_data.organization_name,
+        "organization_shortcode": project_data.organization_shortcode.upper(),
+        "organization_logo_url": None,  # Will be updated if logo uploaded
+        "project_name": project_data.project_name,
+        "project_code": project_code,
+        "project_logo_url": None,  # Will be updated if logo uploaded
+        "project_address": project_data.project_address,
+        "max_kennels": project_data.max_kennels,
+        "status": ProjectStatus.ACTIVE.value,
+        "drive_folder_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.projects.insert_one(project)
+    logger.info(f"Project created: {project_code} - {project_data.project_name}")
+    
+    # Create admin user for this project
+    admin_user = {
+        "id": str(uuid.uuid4()),
+        "email": project_data.admin_email,
+        "first_name": project_data.admin_first_name,
+        "last_name": project_data.admin_last_name,
+        "mobile": project_data.admin_mobile,
+        "role": UserRole.ADMIN.value,
+        "project_id": project_id,
+        "password_hash": hash_password(project_data.admin_password),
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(admin_user)
+    logger.info(f"Project admin created: {project_data.admin_email}")
+    
+    # Initialize kennels for this project
+    kennels = []
+    for i in range(1, project_data.max_kennels + 1):
+        kennels.append({
+            "id": str(uuid.uuid4()),
+            "project_id": project_id,
+            "kennel_number": i,
+            "is_occupied": False,
+            "current_case_id": None,
+            "last_updated": datetime.now(timezone.utc).isoformat()
+        })
+    
+    if kennels:
+        await db.kennels.insert_many(kennels)
+        logger.info(f"Initialized {project_data.max_kennels} kennels for project {project_code}")
+    
+    # Copy default medicines to this project
+    default_medicines = await db.medicines.find({"project_id": {"$exists": False}}, {"_id": 0}).to_list(None)
+    if default_medicines:
+        for med in default_medicines:
+            med["id"] = str(uuid.uuid4())
+            med["project_id"] = project_id
+            med["current_stock"] = 0
+        await db.medicines.insert_many(default_medicines)
+        logger.info(f"Copied {len(default_medicines)} medicines to project {project_code}")
+    
+    # Copy default food items to this project
+    default_food = await db.food_items.find({"project_id": {"$exists": False}}, {"_id": 0}).to_list(None)
+    if default_food:
+        for food in default_food:
+            food["id"] = str(uuid.uuid4())
+            food["project_id"] = project_id
+            food["current_stock"] = 0
+        await db.food_items.insert_many(default_food)
+        logger.info(f"Copied {len(default_food)} food items to project {project_code}")
+    
+    return {
+        "message": f"Project '{project_data.project_name}' created successfully",
+        "project": project,
+        "admin_email": project_data.admin_email,
+        "project_url": f"/app/{project_code.lower()}/"
+    }
+
+@api_router.put("/projects/{project_id}")
+async def update_project(
+    project_id: str,
+    update_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update project details"""
+    # Check access
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if current_user.get("project_id") != project_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        # Non-Super Admin can only update limited fields
+        allowed_fields = ["project_address", "max_kennels"]
+        update_data = {k: v for k, v in update_data.items() if k in allowed_fields}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.projects.update_one(
+        {"id": project_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    return {"message": "Project updated successfully"}
+
+@api_router.delete("/projects/{project_id}")
+async def delete_project(
+    project_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a project - Super Admin only (sets status to Inactive)"""
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Only Super Admin can delete projects")
+    
+    # Soft delete - set status to Inactive
+    result = await db.projects.update_one(
+        {"id": project_id},
+        {"$set": {"status": ProjectStatus.INACTIVE.value, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    return {"message": "Project deactivated successfully"}
 
 # ==================== STATISTICS ====================
 
