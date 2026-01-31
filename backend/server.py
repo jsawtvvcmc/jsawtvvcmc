@@ -44,12 +44,17 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 # Enums
 class UserRole(str, Enum):
-    SUPER_USER = "Super User"
-    ADMIN = "Admin"
+    SUPER_ADMIN = "Super Admin"  # Global access to all projects
+    ADMIN = "Admin"              # Project-level admin
     DRIVER = "Driver"
     CATCHER = "Catcher"
     VETERINARY = "Veterinary Doctor"
     CARETAKER = "Caretaker"
+
+class ProjectStatus(str, Enum):
+    ACTIVE = "Active"
+    INACTIVE = "Inactive"
+    SUSPENDED = "Suspended"
 
 class CaseStatus(str, Enum):
     CAUGHT = "Caught"
