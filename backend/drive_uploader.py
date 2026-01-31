@@ -1,6 +1,15 @@
 """
 Google Drive Upload Utility for J-APP
 Handles folder structure and file naming conventions
+
+Folder Structure:
+- FormType/Year/Month/A/ (first photos)
+- FormType/Year/Month/B/ (second photos)
+- FormType/Year/Month/C/ (third photos)
+- FormType/Year/Month/D/ (fourth photos)
+
+File Naming:
+- {case-number}.jpg (e.g., JS-TAL-JAN-C0001.jpg)
 """
 import os
 import io
@@ -75,10 +84,20 @@ class DriveUploader:
         self.folder_cache[cache_key] = folder_id
         return folder_id
     
-    def _build_folder_path(self, form_type: str, date: datetime) -> str:
-        """Build folder path and return the final folder ID"""
+    def _build_folder_path(self, form_type: str, date: datetime, photo_index: int = 0) -> str:
+        """
+        Build folder path and return the final folder ID
+        
+        Structure: FormType/Year/Month/A (or B/C/D)
+        - All photos for the month in one folder (not day-wise)
+        - Subfolders A/B/C/D for photo position
+        """
         year = str(date.year)
         month = str(date.month).zfill(2)
+        
+        # Photo subfolder names (uppercase A, B, C, D)
+        subfolder_names = ['A', 'B', 'C', 'D']
+        subfolder_name = subfolder_names[min(photo_index, 3)]
         
         # Get or create form type folder (Catching, Surgery, etc.)
         form_folder_id = self._get_or_create_folder(form_type, self.root_folder_id)
@@ -89,34 +108,19 @@ class DriveUploader:
         # Get or create month folder
         month_folder_id = self._get_or_create_folder(month, year_folder_id)
         
-        return month_folder_id
-    
-    def _get_photo_subfolder(self, month_folder_id: str, photo_index: int) -> str:
-        """Get or create a/b/c/d subfolder based on photo index"""
-        subfolder_names = ['a', 'b', 'c', 'd']
-        subfolder_name = subfolder_names[min(photo_index, 3)]
-        return self._get_or_create_folder(subfolder_name, month_folder_id)
-    
-    def _extract_case_suffix(self, case_number: str) -> str:
-        """Extract last 4 digits from case number"""
-        # Case number format: JSAWT-TAL-JAN-0012 -> 0012
-        parts = case_number.split('-')
-        if parts:
-            return parts[-1].zfill(4)
-        return "0000"
-    
-    def _generate_filename(self, form_type: str, case_number: str, date: datetime, photo_index: int) -> str:
-        """Generate filename based on form type and conventions"""
-        date_str = date.strftime("%d-%m-%y")
-        photo_suffix = ['a', 'b', 'c', 'd'][min(photo_index, 3)]
+        # Get or create A/B/C/D subfolder
+        photo_folder_id = self._get_or_create_folder(subfolder_name, month_folder_id)
         
-        if form_type in ['Catching', 'Surgery', 'Release']:
-            # Format: DD-MM-YY-XXXX.jpg
-            case_suffix = self._extract_case_suffix(case_number)
-            return f"{date_str}-{case_suffix}.jpg"
-        else:
-            # Format for Feeding and Post-op-care: CASENUMBER-DD-MM-YY-a.jpg
-            return f"{case_number}-{date_str}-{photo_suffix}.jpg"
+        return photo_folder_id
+    
+    def _generate_filename(self, case_number: str) -> str:
+        """
+        Generate filename from case number
+        
+        Format: {case-number}.jpg
+        Example: JS-TAL-JAN-C0001.jpg
+        """
+        return f"{case_number}.jpg"
     
     def upload_image(
         self,
@@ -132,9 +136,15 @@ class DriveUploader:
         Args:
             base64_data: Base64 encoded image
             form_type: One of 'Catching', 'Surgery', 'Release', 'Feeding', 'Post-op-care', 'Config-files'
-            case_number: Case number (e.g., JSAWT-TAL-JAN-0012)
+            case_number: Case number (e.g., JS-TAL-JAN-C0001)
             date: Date for the photo (defaults to now)
-            photo_index: 0=a, 1=b, 2=c, 3=d
+            photo_index: 0=A (first), 1=B (second), 2=C (third), 3=D (fourth)
+            
+        Folder Structure:
+            FormType/Year/Month/A/{case-number}.jpg (first photo)
+            FormType/Year/Month/B/{case-number}.jpg (second photo)
+            FormType/Year/Month/C/{case-number}.jpg (third photo)
+            FormType/Year/Month/D/{case-number}.jpg (fourth photo)
             
         Returns:
             Dict with file_id, direct_link, filename, folder_path
@@ -151,14 +161,11 @@ class DriveUploader:
                 folder_id = self._get_or_create_folder('Config-files', self.root_folder_id)
                 filename = f"{case_number}.jpg"  # case_number here is actually the config file name
             else:
-                # Build folder path: FormType/Year/Month
-                month_folder_id = self._build_folder_path(form_type, date)
+                # Build folder path: FormType/Year/Month/A (or B/C/D)
+                folder_id = self._build_folder_path(form_type, date, photo_index)
                 
-                # Get a/b/c/d subfolder
-                folder_id = self._get_photo_subfolder(month_folder_id, photo_index)
-                
-                # Generate filename
-                filename = self._generate_filename(form_type, case_number, date, photo_index)
+                # Generate filename: {case-number}.jpg
+                filename = self._generate_filename(case_number)
             
             # Remove data URL prefix if present
             if ',' in base64_data:
@@ -208,14 +215,18 @@ class DriveUploader:
                 body={'type': 'anyone', 'role': 'reader'}
             ).execute()
             
-            logger.info(f"Uploaded: {form_type}/{date.year}/{str(date.month).zfill(2)}/{['a','b','c','d'][photo_index]}/{filename}")
+            # Subfolder letter
+            subfolder = ['A', 'B', 'C', 'D'][min(photo_index, 3)]
+            folder_path = f"{form_type}/{date.year}/{str(date.month).zfill(2)}/{subfolder}"
+            
+            logger.info(f"Uploaded: {folder_path}/{filename}")
             
             return {
                 'file_id': file['id'],
                 'filename': filename,
                 'direct_link': f"https://drive.google.com/uc?id={file['id']}",
                 'web_view_link': file.get('webViewLink'),
-                'folder_path': f"{form_type}/{date.year}/{str(date.month).zfill(2)}/{['a','b','c','d'][photo_index]}"
+                'folder_path': folder_path
             }
             
         except Exception as e:
