@@ -1,5 +1,6 @@
 """
 Database models for ABC Program Management System
+Multi-Project/Multi-Tenant Architecture
 """
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import Optional, List, Dict
@@ -9,12 +10,17 @@ import uuid
 
 # Enums
 class UserRole(str, Enum):
-    SUPER_USER = "Super User"
-    ADMIN = "Admin"
+    SUPER_ADMIN = "Super Admin"  # Global admin - can access all projects
+    ADMIN = "Admin"              # Project-level admin
     DRIVER = "Driver"
     CATCHER = "Catcher"
     VETERINARY = "Veterinary Doctor"
     CARETAKER = "Caretaker"
+
+class ProjectStatus(str, Enum):
+    ACTIVE = "Active"
+    INACTIVE = "Inactive"
+    SUSPENDED = "Suspended"
 
 class CaseStatus(str, Enum):
     CAUGHT = "Caught"
