@@ -1984,7 +1984,16 @@ async def create_daily_feeding(
     data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Create daily feeding record"""
+    """Create daily feeding record - with project context"""
+    # Determine project_id from current user
+    project_id = current_user.get("project_id")
+    
+    # Get project code for Drive folder structure
+    project_code = "TAL"
+    if project_id:
+        project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+        if project:
+            project_code = project.get("project_code", "TAL")
     
     # Upload photos to Google Drive (Feeding) using current user's credentials
     photo_links = []
@@ -2003,7 +2012,8 @@ async def create_daily_feeding(
                     form_type="Feeding",
                     case_number=feeding_id,
                     date=feeding_date,
-                    photo_index=i
+                    photo_index=i,
+                    project_code=project_code
                 )
                 if result:
                     photo_links.append(result)
@@ -2018,6 +2028,7 @@ async def create_daily_feeding(
     
     feeding = {
         "id": str(uuid.uuid4()),
+        "project_id": project_id,
         "date": data.get("date", datetime.now(timezone.utc).isoformat()),
         "meal_time": data["meal_time"],
         "kennel_numbers": data["kennel_numbers"],
@@ -2030,18 +2041,24 @@ async def create_daily_feeding(
         "caretaker_id": current_user["id"]
     }
     
-    # Deduct food stock
+    # Deduct food stock (filter by project)
     for food_id, quantity in data["food_items"].items():
+        food_query = {"id": food_id}
+        if project_id:
+            food_query["project_id"] = project_id
         await db.food_items.update_one(
-            {"id": food_id},
+            food_query,
             {"$inc": {"current_stock": -float(quantity)}}
         )
     
     await db.daily_feeding.insert_one(feeding)
     
-    # Update cases with feeding reference
+    # Update cases with feeding reference (filter kennels by project)
     for kennel_num in data["kennel_numbers"]:
-        kennel = await db.kennels.find_one({"kennel_number": kennel_num}, {"_id": 0})
+        kennel_query = {"kennel_number": kennel_num}
+        if project_id:
+            kennel_query["project_id"] = project_id
+        kennel = await db.kennels.find_one(kennel_query, {"_id": 0})
         if kennel and kennel.get("current_case_id"):
             await db.cases.update_one(
                 {"id": kennel["current_case_id"]},
