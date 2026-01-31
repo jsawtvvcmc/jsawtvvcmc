@@ -213,10 +213,10 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     user: User
 
-# Startup event to create default super user and configuration
+# Startup event to create default super admin and configuration
 @app.on_event("startup")
 async def create_default_superuser():
-    """Create default super user if not exists"""
+    """Create default super admin if not exists"""
     default_email = "manoj@janicestrust.org"
     existing_user = await db.users.find_one({"email": default_email}, {"_id": 0})
     
@@ -227,17 +227,25 @@ async def create_default_superuser():
             "first_name": "Manoj",
             "last_name": "Oswal",
             "mobile": "9890044455",
-            "role": UserRole.SUPER_USER.value,
+            "role": UserRole.SUPER_ADMIN.value,  # Global Super Admin
+            "project_id": None,  # None = access to all projects
             "password_hash": hash_password("Kashid@25067"),
             "is_active": True,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(default_user)
-        logger.info(f"Default super user created: {default_email}")
+        logger.info(f"Default super admin created: {default_email}")
     else:
-        logger.info(f"Default super user already exists: {default_email}")
+        # Update existing user to Super Admin if needed
+        if existing_user.get("role") == "Super User":
+            await db.users.update_one(
+                {"email": default_email},
+                {"$set": {"role": UserRole.SUPER_ADMIN.value, "project_id": None}}
+            )
+            logger.info(f"Updated user to Super Admin: {default_email}")
+        logger.info(f"Default super admin already exists: {default_email}")
     
-    # Create default system configuration
+    # Create default system configuration (legacy - for backward compatibility)
     existing_config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
     if not existing_config:
         default_config = {
@@ -257,7 +265,28 @@ async def create_default_superuser():
         await db.system_config.insert_one(default_config)
         logger.info("Default system configuration created")
     
-    # Create default medicines for surgery
+    # Create default project if none exists
+    existing_projects = await db.projects.count_documents({})
+    if existing_projects == 0:
+        default_project = {
+            "id": str(uuid.uuid4()),
+            "organization_name": "Janice Smith Animal Welfare Trust",
+            "organization_shortcode": "JS",
+            "organization_logo_url": None,
+            "project_name": "Talegaon ABC Project",
+            "project_code": "TAL",
+            "project_logo_url": None,
+            "project_address": "352, Vadgaon, Yashwant Nagar, Talegaon Dabhade, Maharashtra 410507, India",
+            "max_kennels": 300,
+            "status": ProjectStatus.ACTIVE.value,
+            "drive_folder_id": None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.projects.insert_one(default_project)
+        logger.info("Default project (TAL) created")
+    
+    # Create default medicines for surgery (global - will be copied to projects)
     existing_medicines_count = await db.medicines.count_documents({})
     if existing_medicines_count == 0:
         default_medicines = [
