@@ -1310,12 +1310,16 @@ async def get_medicine_usage_report(
         start_dt = dt.strptime(start.replace("T", " "), "%Y-%m-%d %H:%M:%S")
         end_dt = dt.strptime(end.replace("T", " "), "%Y-%m-%d %H:%M:%S")
     
-    logs = await db.medicine_logs.find({
-        "date": {"$gte": start_dt, "$lte": end_dt}
-    }, {"_id": 0}).to_list(None)
+    # Build query with project filter
+    log_query = {"date": {"$gte": start_dt, "$lte": end_dt}}
+    if query_project_id:
+        log_query["project_id"] = query_project_id
     
-    # Get all medicines
-    medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+    logs = await db.medicine_logs.find(log_query, {"_id": 0}).to_list(None)
+    
+    # Get medicines for this project
+    med_query = {"project_id": query_project_id} if query_project_id else {}
+    medicines = await db.medicines.find(med_query, {"_id": 0}).to_list(None)
     medicine_map = {m["id"]: m for m in medicines}
     
     # Aggregate by medicine
