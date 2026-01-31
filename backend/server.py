@@ -1873,10 +1873,23 @@ async def add_daily_treatment(
     data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Add daily treatment record"""
+    """Add daily treatment record - with project access check"""
     case = await db.cases.find_one({"id": case_id}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Check project access
+    project_id = case.get("project_id")
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if project_id != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied to this case")
+    
+    # Get project code for Drive folder structure
+    project_code = case.get("project_code", "TAL")
+    if project_id:
+        project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+        if project:
+            project_code = project.get("project_code", project_code)
     
     # Upload photos to Google Drive (Post-op-care) using current user's credentials
     photo_links = []
@@ -1892,7 +1905,8 @@ async def add_daily_treatment(
                     form_type="Post-op-care",
                     case_number=case["case_number"],
                     date=treatment_date,
-                    photo_index=i
+                    photo_index=i,
+                    project_code=project_code
                 )
                 if result:
                     photo_links.append(result)
@@ -1933,7 +1947,7 @@ async def add_daily_treatment(
         # For proper stock management, medicines should be matched by name to their IDs
         pass
     else:
-        # Old format with medicine IDs
+        # Old format with medicine IDs - verify medicine belongs to this project
         medicines_to_deduct = [
             (data.get("antibiotic_id"), data.get("antibiotic_dosage")),
             (data.get("painkiller_id"), data.get("painkiller_dosage")),
@@ -1942,8 +1956,12 @@ async def add_daily_treatment(
         
         for med_id, dosage in medicines_to_deduct:
             if med_id and dosage:
+                # Verify medicine belongs to project
+                med_query = {"id": med_id}
+                if project_id:
+                    med_query["project_id"] = project_id
                 await db.medicines.update_one(
-                    {"id": med_id},
+                    med_query,
                     {"$inc": {"current_stock": -float(dosage)}}
                 )
     
