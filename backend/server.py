@@ -1519,12 +1519,25 @@ async def create_catching_record(
     data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a catching record with case number format: JS-TAL-JAN-C0001"""
+    """Create a catching record with case number format: JS-VVC-JAN-C0001"""
     from utils import get_next_case_number
     
-    config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
-    org_shortcode = config.get("organization_shortcode", "JS") if config else "JS"
-    project_code = config.get("project_code", "TAL") if config else "TAL"
+    # Get project info
+    project_id = current_user.get("project_id")
+    project = None
+    
+    if project_id:
+        project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    
+    if project:
+        org_shortcode = project.get("organization_shortcode", "JS")
+        project_code = project.get("project_code", "TAL")
+    else:
+        # Fallback to system config (legacy)
+        config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+        org_shortcode = config.get("organization_shortcode", "JS") if config else "JS"
+        project_code = config.get("project_code", "TAL") if config else "TAL"
+    
     # Generate case number with "C" prefix for catching
     case_number = await get_next_case_number(db, org_shortcode, project_code, case_type="C")
     
@@ -1546,7 +1559,8 @@ async def create_catching_record(
                     form_type="Catching",
                     case_number=case_number,
                     date=catching_date,
-                    photo_index=i
+                    photo_index=i,
+                    project_code=project_code  # Pass project code for folder structure
                 )
                 if result:
                     photo_links.append(result)
@@ -1561,6 +1575,7 @@ async def create_catching_record(
     
     case_dict = {
         "id": str(uuid.uuid4()),
+        "project_id": project_id,  # Link to project
         "case_number": case_number,
         "status": CaseStatus.CAUGHT.value,
         "project_code": project_code,
