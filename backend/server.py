@@ -2402,6 +2402,7 @@ async def bulk_upload_catching(
                 # Create case
                 case_dict = {
                     "id": str(uuid.uuid4()),
+                    "project_id": project_id,
                     "case_number": case_number,
                     "status": CaseStatus.CAUGHT.value,
                     "project_code": project_code,
