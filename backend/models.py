@@ -335,9 +335,9 @@ class Case(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    project_id: str  # Required - cases are project-specific
     case_number: str
     status: CaseStatus
-    project_code: str = "TAL"  # Default project code
     
     # Related records
     catching: CatchingRecord
@@ -352,12 +352,14 @@ class Case(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-# Configuration Model
+# Configuration Model (Now per-project, managed via Project model)
 class SystemConfiguration(BaseModel):
+    """Legacy configuration - kept for backward compatibility"""
     model_config = ConfigDict(extra="ignore")
     
     id: str = "system_config"
     organization_name: str = "Janices Trust"
+    organization_shortcode: str = "JS"
     registered_office: str = ""
     organization_logo_base64: Optional[str] = None
     project_name: str = "ABC Program"
@@ -365,4 +367,5 @@ class SystemConfiguration(BaseModel):
     municipal_logo_base64: Optional[str] = None
     project_address: str = ""
     max_kennels: int = 300
+    google_maps_api_key: Optional[str] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
