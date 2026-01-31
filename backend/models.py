@@ -212,6 +212,7 @@ class FoodItem(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    project_id: str  # Required - food items are project-specific
     name: str
     unit: FoodUnit
     current_stock: float = 0.0
