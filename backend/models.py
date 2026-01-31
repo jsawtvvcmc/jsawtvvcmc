@@ -178,7 +178,7 @@ class Medicine(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    project_id: str  # Required - medicines are project-specific
+    project_id: Optional[str] = None  # Optional for backward compatibility with legacy data
     name: str
     generic_name: Optional[str] = None
     unit: MedicineUnit
@@ -212,7 +212,7 @@ class FoodItem(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    project_id: str  # Required - food items are project-specific
+    project_id: Optional[str] = None  # Optional for backward compatibility with legacy data
     name: str
     unit: FoodUnit
     current_stock: float = 0.0
