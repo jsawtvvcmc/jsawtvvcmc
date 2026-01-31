@@ -17,6 +17,7 @@ import Reports from './components/Reports';
 import Records from './components/Records';
 import Settings from './components/Settings';
 import BulkUpload from './components/BulkUpload';
+import ProjectManagement from './components/ProjectManagement';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
