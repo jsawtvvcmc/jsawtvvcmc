@@ -233,6 +233,7 @@ class Kennel(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    project_id: str  # Required - kennels are project-specific
     kennel_number: int
     is_occupied: bool = False
     current_case_id: Optional[str] = None
