@@ -178,6 +178,7 @@ class Medicine(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    project_id: str  # Required - medicines are project-specific
     name: str
     generic_name: Optional[str] = None
     unit: MedicineUnit
