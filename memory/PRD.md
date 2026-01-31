@@ -86,9 +86,19 @@ All collections filtered by `project_id`:
 - [x] User model updated with project_id
 - [x] Drive uploader updated for project-based folders
 - [x] Month names in folder paths (Jan, Feb, etc.)
-- [ ] Project creation API endpoints (in progress)
-- [ ] Frontend routing for projects (pending)
-- [ ] Project creation wizard UI (pending)
+- [x] **Phase 1: Database & Model updates** - COMPLETED
+- [x] **Phase 2: Backend API refactoring** - COMPLETED (Jan 31, 2026)
+  - All API endpoints updated to filter by project_id
+  - Super Admin (project_id=None) has global access
+  - Regular users can only access their project's data
+  - Project CRUD endpoints created (GET, POST, PUT, DELETE /api/projects)
+  - Cases, kennels, medicines, food items, daily feeding all project-aware
+  - Bulk upload endpoints updated for project context
+  - Medicine/food stock logs include project_id
+- [ ] **Phase 3: Frontend implementation** - PENDING
+  - Project Creation Wizard UI
+  - URL routing for projects (e.g., /vvc/dashboard)
+  - Project selector for Super Admin
 
 ### Forms & Workflows ✅
 - [x] **Catching Form** - GPS extraction from photo EXIF data, photo upload with camera option
@@ -131,15 +141,20 @@ All collections filtered by `project_id`:
   - Each user connects their own Google Drive account
   - OAuth flow properly links to the authenticated user
   - Disconnect functionality added
+- [x] **Multi-Tenancy Backend (Phase 2)** ✅ COMPLETED (Jan 31, 2026)
+  - All API endpoints filter by project_id
+  - 37/37 backend tests pass
 
 ### P1 - High Priority
 - [x] ~~**Google Drive Integration**~~ ✅ COMPLETED (Jan 28, 2026)
 - [x] ~~**Bulk Upload Module**~~ ✅ COMPLETED (Jan 28, 2026)
 - [x] ~~**Auto Medicine Calculation**~~ ✅ COMPLETED (Jan 28, 2026)
+- [ ] **Multi-Tenancy Frontend (Phase 3)** - Project Creation Wizard, URL routing
   
 ### P2 - Medium Priority
 - [ ] **Progressive Web App (PWA)** - Make app installable on Android devices
 - [ ] **Backend Refactoring** - Split server.py into modular route files
+- [ ] **Resume VPS Deployment** - Deploy to 66.116.226.85 with multi-tenant support
 
 ### P3 - Low Priority / Future
 - [ ] **Native Android App** - Using Mobile Agent
