@@ -2649,15 +2649,17 @@ async def calculate_surgery_medicines(
     data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Calculate medicine dosages for a surgery based on weight and gender"""
+    """Calculate medicine dosages for a surgery based on weight and gender - with project context"""
     weight = data.get("weight", 0)
     gender = data.get("gender", "Male")
     
     if weight < 10 or weight > 30:
         raise HTTPException(status_code=400, detail="Weight must be between 10-30 kg")
     
-    # Get all medicines
-    medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+    # Get medicines for this project
+    project_id = current_user.get("project_id")
+    med_query = {"project_id": project_id} if project_id else {}
+    medicines = await db.medicines.find(med_query, {"_id": 0}).to_list(None)
     medicine_map = {m["name"]: m for m in medicines}
     
     calculated = {}
