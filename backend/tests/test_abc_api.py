@@ -49,7 +49,7 @@ class TestAuthentication:
         assert "access_token" in data
         assert "user" in data
         assert data["user"]["email"] == TEST_EMAIL
-        assert data["user"]["role"] == "Super User"
+        assert data["user"]["role"] == "Super Admin"
         print(f"Login successful: {data['user']['email']}")
         return data["access_token"]
     
