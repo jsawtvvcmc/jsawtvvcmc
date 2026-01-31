@@ -8,8 +8,9 @@ const Dashboard = () => {
 
   const getRoleCapabilities = (role) => {
     const capabilities = {
-      'Super User': [
+      'Super Admin': [
         'All sections access',
+        'Project Management',
         'User Management',
         'All reports',
         'Bulk data generator',
