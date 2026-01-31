@@ -1441,10 +1441,22 @@ async def add_food_stock(
 @api_router.get("/kennels")
 async def get_kennels(
     status_filter: Optional[str] = None,
+    project_id: str = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get all kennels or filter by status"""
+    """Get kennels - filtered by project"""
     query = {}
+    
+    # Project filter
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if project_id:
+            query["project_id"] = project_id
+    else:
+        user_project_id = current_user.get("project_id")
+        if user_project_id:
+            query["project_id"] = user_project_id
+    
+    # Status filter
     if status_filter == "available":
         query["is_occupied"] = False
     elif status_filter == "occupied":
@@ -1454,19 +1466,39 @@ async def get_kennels(
     return kennels
 
 @api_router.post("/kennels/initialize")
-async def initialize_kennels(current_user: dict = Depends(get_current_user)):
-    """Initialize kennels (run once)"""
-    config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
-    max_kennels = config.get("max_kennels", 300) if config else 300
+async def initialize_kennels(
+    project_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Initialize kennels for a project (run once per project)"""
+    # Determine project
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if not project_id:
+            # Fallback to legacy behavior
+            config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+            max_kennels = config.get("max_kennels", 300) if config else 300
+            project_id = None
+        else:
+            project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+            if not project:
+                raise HTTPException(status_code=404, detail="Project not found")
+            max_kennels = project.get("max_kennels", 300)
+    else:
+        project_id = current_user.get("project_id")
+        project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+        max_kennels = project.get("max_kennels", 300) if project else 300
     
-    existing = await db.kennels.count_documents({})
+    # Check if kennels already exist for this project
+    query = {"project_id": project_id} if project_id else {}
+    existing = await db.kennels.count_documents(query)
     if existing > 0:
-        return {"message": f"{existing} kennels already exist"}
+        return {"message": f"{existing} kennels already exist for this project"}
     
     kennels = []
     for i in range(1, max_kennels + 1):
         kennel = {
             "id": str(uuid.uuid4()),
+            "project_id": project_id,
             "kennel_number": i,
             "is_occupied": False,
             "current_case_id": None,
