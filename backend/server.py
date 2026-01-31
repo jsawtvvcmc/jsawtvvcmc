@@ -1807,12 +1807,15 @@ async def add_surgery_record(
     if is_cancelled:
         surgery["pre_surgery_status"] = "Cancel Surgery"
         new_status = CaseStatus.SURGERY_CANCELLED.value
-        # Free kennel if cancelled
+        # Free kennel if cancelled (filter by project)
         if case.get("initial_observation"):
             kennel_number = case["initial_observation"].get("kennel_number")
             if kennel_number:
+                kennel_query = {"kennel_number": kennel_number}
+                if project_id:
+                    kennel_query["project_id"] = project_id
                 await db.kennels.update_one(
-                    {"kennel_number": kennel_number},
+                    kennel_query,
                     {
                         "$set": {
                             "is_occupied": False,
