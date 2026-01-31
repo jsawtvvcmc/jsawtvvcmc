@@ -1841,6 +1841,7 @@ async def add_surgery_record(
                 # Log the usage
                 log_entry = {
                     "id": str(uuid.uuid4()),
+                    "project_id": project_id,
                     "medicine_id": medicine_id,
                     "medicine_name": medicine.get("name") if medicine else "Unknown",
                     "type": "usage",
