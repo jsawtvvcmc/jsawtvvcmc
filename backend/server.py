@@ -2288,7 +2288,7 @@ async def bulk_upload_catching(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Bulk upload catching records from Excel file"""
+    """Bulk upload catching records from Excel file - with project context"""
     if not file.filename.endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Please upload an Excel file (.xlsx or .xls)")
     
@@ -2306,10 +2306,21 @@ async def bulk_upload_catching(
         
         results = {"success": 0, "failed": 0, "errors": []}
         
-        # Get project codes
-        config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
-        org_shortcode = config.get("organization_shortcode", "JS") if config else "JS"
-        project_code = config.get("project_code", "TAL") if config else "TAL"
+        # Get project info from current user's project
+        project_id = current_user.get("project_id")
+        org_shortcode = "JS"
+        project_code = "TAL"
+        
+        if project_id:
+            project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+            if project:
+                org_shortcode = project.get("organization_shortcode", "JS")
+                project_code = project.get("project_code", "TAL")
+        else:
+            # Fallback to system config (legacy)
+            config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
+            org_shortcode = config.get("organization_shortcode", "JS") if config else "JS"
+            project_code = config.get("project_code", "TAL") if config else "TAL"
         
         for idx, row in df.iterrows():
             row_num = idx + 3  # Account for header and hint rows
