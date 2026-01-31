@@ -1713,10 +1713,23 @@ async def add_surgery_record(
     data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Add surgery record to a case"""
+    """Add surgery record to a case - with project access check"""
     case = await db.cases.find_one({"id": case_id}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Check project access
+    project_id = case.get("project_id")
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if project_id != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied to this case")
+    
+    # Get project code for Drive folder structure
+    project_code = case.get("project_code", "TAL")
+    if project_id:
+        project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+        if project:
+            project_code = project.get("project_code", project_code)
     
     # Upload photos to Google Drive (using current user's credentials)
     photo_links = []
@@ -1732,7 +1745,8 @@ async def add_surgery_record(
                     form_type="Surgery",
                     case_number=case["case_number"],
                     date=surgery_date,
-                    photo_index=i
+                    photo_index=i,
+                    project_code=project_code
                 )
                 if result:
                     photo_links.append(result)
@@ -1756,8 +1770,9 @@ async def add_surgery_record(
     # If weight provided but no explicit medicines_to_deduct, auto-calculate
     if weight and weight >= 10 and weight <= 30 and data.get("pre_surgery_status") != "Cancel Surgery":
         if not medicines_to_deduct:
-            # Get all medicines for mapping
-            all_medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+            # Get all medicines for this project
+            med_query = {"project_id": project_id} if project_id else {}
+            all_medicines = await db.medicines.find(med_query, {"_id": 0}).to_list(None)
             medicine_map = {m["name"]: m for m in all_medicines}
             
             for med_name in MEDICINE_PROTOCOL.keys():
