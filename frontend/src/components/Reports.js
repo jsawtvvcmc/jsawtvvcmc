@@ -222,14 +222,14 @@ const Reports = () => {
       const url = getPhotoUrl(photo);
       console.log(`Catching photo ${idx} URL:`, url); // Debug
       if (url) {
-        photosHtml += '<div class="photo-item"><img src="' + url + '" class="photo-img" alt="Catching Photo" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.style.opacity=\'0.3\'"><div class="photo-label">Catching Photo ' + (idx + 1) + '</div></div>';
+        photosHtml += '<div class="photo-item"><img src="' + url + '" class="photo-img" alt="Catching Photo" style="width:100px; height:100px; object-fit:cover; border:2px solid #4CAF50; border-radius:4px;"><div class="photo-label">Catching ' + (idx + 1) + '</div></div>';
       }
     });
     surgeryPhotos.slice(0, 2).forEach((photo, idx) => {
       const url = getPhotoUrl(photo);
       console.log(`Surgery photo ${idx} URL:`, url); // Debug
       if (url) {
-        photosHtml += '<div class="photo-item"><img src="' + url + '" class="photo-img" alt="Surgery Photo" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.style.opacity=\'0.3\'"><div class="photo-label">Surgery Photo ' + (idx + 1) + '</div></div>';
+        photosHtml += '<div class="photo-item"><img src="' + url + '" class="photo-img" alt="Surgery Photo" style="width:100px; height:100px; object-fit:cover; border:2px solid #4CAF50; border-radius:4px;"><div class="photo-label">Surgery ' + (idx + 1) + '</div></div>';
       }
     });
 
