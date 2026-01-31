@@ -1176,12 +1176,22 @@ async def get_medicine_logs(
     start_date: str = None,
     end_date: str = None,
     medicine_id: str = None,
+    project_id: str = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get medicine usage and restock logs"""
+    """Get medicine usage and restock logs - filtered by project"""
     from datetime import datetime as dt
     
     query = {}
+    
+    # Project filter
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if project_id:
+            query["project_id"] = project_id
+    else:
+        user_project_id = current_user.get("project_id")
+        if user_project_id:
+            query["project_id"] = user_project_id
     
     # Filter by user-provided 'date' field - convert strings to datetime for MongoDB
     if start_date:
