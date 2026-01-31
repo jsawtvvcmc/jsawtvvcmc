@@ -1602,10 +1602,21 @@ async def create_catching_record(
 @api_router.get("/cases")
 async def get_cases(
     status: Optional[str] = None,
+    project_id: str = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get all cases"""
+    """Get all cases - filtered by project"""
     query = {}
+    
+    # Project filter
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if project_id:
+            query["project_id"] = project_id
+    else:
+        user_project_id = current_user.get("project_id")
+        if user_project_id:
+            query["project_id"] = user_project_id
+    
     if status:
         query["status"] = status
     
@@ -1617,10 +1628,16 @@ async def get_case(
     case_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get a specific case"""
+    """Get a specific case - with project access check"""
     case = await db.cases.find_one({"id": case_id}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Check project access
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if case.get("project_id") != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied to this case")
+    
     return case
 
 @api_router.post("/cases/{case_id}/initial-observation")
@@ -1629,13 +1646,23 @@ async def add_initial_observation(
     data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Add initial observation to a case"""
+    """Add initial observation to a case - with project access check"""
     case = await db.cases.find_one({"id": case_id}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     
-    # Check if kennel is available
-    kennel = await db.kennels.find_one({"kennel_number": data["kennel_number"]}, {"_id": 0})
+    # Check project access
+    project_id = case.get("project_id")
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if project_id != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied to this case")
+    
+    # Check if kennel is available (filter by project)
+    kennel_query = {"kennel_number": data["kennel_number"]}
+    if project_id:
+        kennel_query["project_id"] = project_id
+    
+    kennel = await db.kennels.find_one(kennel_query, {"_id": 0})
     if not kennel or kennel["is_occupied"]:
         raise HTTPException(status_code=400, detail="Kennel not available")
     
@@ -1666,9 +1693,9 @@ async def add_initial_observation(
         }
     )
     
-    # Update kennel
+    # Update kennel (filter by project)
     await db.kennels.update_one(
-        {"kennel_number": data["kennel_number"]},
+        kennel_query,
         {
             "$set": {
                 "is_occupied": True,
