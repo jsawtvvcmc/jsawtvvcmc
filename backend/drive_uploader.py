@@ -84,29 +84,40 @@ class DriveUploader:
         self.folder_cache[cache_key] = folder_id
         return folder_id
     
-    def _build_folder_path(self, form_type: str, date: datetime, photo_index: int = 0) -> str:
+    def _build_folder_path(self, form_type: str, date: datetime, photo_index: int = 0, project_code: str = None) -> str:
         """
         Build folder path and return the final folder ID
         
-        Structure: FormType/Year/Month/A (or B/C/D)
-        - All photos for the month in one folder (not day-wise)
+        Structure: ProjectCode/FormType/Year/Month/A (or B/C/D)
+        - Month as 3-letter name (Jan, Feb, etc.)
         - Subfolders A/B/C/D for photo position
+        
+        Example: VVC/Catching/2026/Jan/A/
         """
+        import calendar
+        
         year = str(date.year)
-        month = str(date.month).zfill(2)
+        month_name = calendar.month_abbr[date.month]  # Jan, Feb, Mar, etc.
         
         # Photo subfolder names (uppercase A, B, C, D)
         subfolder_names = ['A', 'B', 'C', 'D']
         subfolder_name = subfolder_names[min(photo_index, 3)]
         
+        # Start from root folder
+        parent_id = self.root_folder_id
+        
+        # If project code provided, create project folder first
+        if project_code:
+            parent_id = self._get_or_create_folder(project_code.upper(), parent_id)
+        
         # Get or create form type folder (Catching, Surgery, etc.)
-        form_folder_id = self._get_or_create_folder(form_type, self.root_folder_id)
+        form_folder_id = self._get_or_create_folder(form_type, parent_id)
         
         # Get or create year folder
         year_folder_id = self._get_or_create_folder(year, form_folder_id)
         
-        # Get or create month folder
-        month_folder_id = self._get_or_create_folder(month, year_folder_id)
+        # Get or create month folder (using name: Jan, Feb, etc.)
+        month_folder_id = self._get_or_create_folder(month_name, year_folder_id)
         
         # Get or create A/B/C/D subfolder
         photo_folder_id = self._get_or_create_folder(subfolder_name, month_folder_id)
