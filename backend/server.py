@@ -1235,10 +1235,11 @@ async def get_medicine_usage_report(
     week: int = None,
     start_date: str = None,
     end_date: str = None,
+    project_id: str = None,
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Get medicine usage report for a period.
+    Get medicine usage report for a period - filtered by project.
     period: 'month', 'week', 'custom'
     month: YYYY-MM format (for month/week period)
     week: 1-5 (for week period)
@@ -1248,6 +1249,14 @@ async def get_medicine_usage_report(
     import calendar
     
     now = datetime.now(timezone.utc)
+    
+    # Determine project filter
+    query_project_id = None
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if project_id:
+            query_project_id = project_id
+    else:
+        query_project_id = current_user.get("project_id")
     
     if period == "month":
         if month:
