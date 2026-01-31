@@ -2073,10 +2073,23 @@ async def add_release_record(
     data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Add release record"""
+    """Add release record - with project access check"""
     case = await db.cases.find_one({"id": case_id}, {"_id": 0})
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Check project access
+    project_id = case.get("project_id")
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if project_id != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied to this case")
+    
+    # Get project code for Drive folder structure
+    project_code = case.get("project_code", "TAL")
+    if project_id:
+        project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+        if project:
+            project_code = project.get("project_code", project_code)
     
     # Upload photos to Google Drive (Release) using current user's credentials
     photo_links = []
@@ -2096,7 +2109,8 @@ async def add_release_record(
                     form_type="Release",
                     case_number=case["case_number"],
                     date=release_date,
-                    photo_index=i
+                    photo_index=i,
+                    project_code=project_code
                 )
                 if result:
                     photo_links.append(result)
@@ -2131,11 +2145,14 @@ async def add_release_record(
         }
     )
     
-    # Free kennel
+    # Free kennel (filter by project)
     if case.get("initial_observation"):
         kennel_number = case["initial_observation"]["kennel_number"]
+        kennel_query = {"kennel_number": kennel_number}
+        if project_id:
+            kennel_query["project_id"] = project_id
         await db.kennels.update_one(
-            {"kennel_number": kennel_number},
+            kennel_query,
             {
                 "$set": {
                     "is_occupied": False,
