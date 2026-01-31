@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: j-app-mongodb
+    restart: always
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - j-app-network
+    environment:
+      - MONGO_INITDB_DATABASE=abc_program_db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: j-app-backend
+    restart: always
+    depends_on:
+      - mongodb
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=abc_program_db
+      - SECRET_KEY=${SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - GOOGLE_DRIVE_CLIENT_ID=${GOOGLE_DRIVE_CLIENT_ID}
+      - GOOGLE_DRIVE_CLIENT_SECRET=${GOOGLE_DRIVE_CLIENT_SECRET}
+      - GOOGLE_DRIVE_FOLDER_ID=${GOOGLE_DRIVE_FOLDER_ID}
+      - GOOGLE_OAUTH_REDIRECT_URI=${GOOGLE_OAUTH_REDIRECT_URI}
+      - FRONTEND_URL=${FRONTEND_URL}
+    networks:
+      - j-app-network
+    ports:
+      - "8001:8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
+    container_name: j-app-frontend
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - j-app-network
+    ports:
+      - "3000:80"
+
+  nginx:
+    image: nginx:alpine
+    container_name: j-app-nginx
+    restart: always
+    depends_on:
+      - frontend
+      - backend
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - j-app-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  j-app-network:
+    driver: bridge
