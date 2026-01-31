@@ -1176,13 +1176,14 @@ async def create_catching_record(
     data: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a catching record"""
+    """Create a catching record with case number format: JS-TAL-JAN-C0001"""
     from utils import get_next_case_number
     
     config = await db.system_config.find_one({"id": "system_config"}, {"_id": 0})
     org_shortcode = config.get("organization_shortcode", "JS") if config else "JS"
     project_code = config.get("project_code", "TAL") if config else "TAL"
-    case_number = await get_next_case_number(db, org_shortcode, project_code)
+    # Generate case number with "C" prefix for catching
+    case_number = await get_next_case_number(db, org_shortcode, project_code, case_type="C")
     
     # Upload photos to Google Drive (using current user's credentials)
     photo_links = []
