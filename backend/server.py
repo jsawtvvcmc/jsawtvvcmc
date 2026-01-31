@@ -1011,18 +1011,42 @@ async def delete_project(
 # ==================== STATISTICS ====================
 
 @api_router.get("/statistics/dashboard")
-async def get_dashboard_statistics(current_user: dict = Depends(get_current_user)):
-    """Get dashboard statistics"""
-    total_cases = await db.cases.count_documents({})
-    active_cases = await db.cases.count_documents({"status": {"$nin": [
+async def get_dashboard_statistics(
+    project_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get dashboard statistics - filtered by project"""
+    # Build query based on project access
+    query = {}
+    kennel_query = {}
+    
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        # Super Admin can see all or filter by project
+        if project_id:
+            query["project_id"] = project_id
+            kennel_query["project_id"] = project_id
+    else:
+        # Non-Super Admin can only see their project
+        user_project_id = current_user.get("project_id")
+        if user_project_id:
+            query["project_id"] = user_project_id
+            kennel_query["project_id"] = user_project_id
+    
+    total_cases = await db.cases.count_documents(query)
+    
+    active_query = {**query, "status": {"$nin": [
         CaseStatus.RELEASED.value,
         CaseStatus.DECEASED.value,
         CaseStatus.SURGERY_CANCELLED.value
-    ]}})
+    ]}}
+    active_cases = await db.cases.count_documents(active_query)
     
-    total_surgeries = await db.cases.count_documents({"surgery": {"$exists": True}})
-    occupied_kennels = await db.kennels.count_documents({"is_occupied": True})
-    total_kennels = await db.kennels.count_documents({})
+    surgery_query = {**query, "surgery": {"$exists": True}}
+    total_surgeries = await db.cases.count_documents(surgery_query)
+    
+    occupied_kennel_query = {**kennel_query, "is_occupied": True}
+    occupied_kennels = await db.kennels.count_documents(occupied_kennel_query)
+    total_kennels = await db.kennels.count_documents(kennel_query)
     
     return {
         "total_cases": total_cases,
