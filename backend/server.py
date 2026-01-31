@@ -1140,6 +1140,7 @@ async def add_medicine_stock(
     
     log_entry = {
         "id": str(uuid.uuid4()),
+        "project_id": medicine.get("project_id"),
         "medicine_id": stock_data.medicine_id,
         "medicine_name": medicine.get("name"),
         "type": "restock",
