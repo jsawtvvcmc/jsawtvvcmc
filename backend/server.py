@@ -2460,8 +2460,12 @@ async def bulk_upload_surgery(
         
         results = {"success": 0, "failed": 0, "errors": [], "medicines_deducted": {}}
         
-        # Get all medicines for mapping
-        medicines = await db.medicines.find({}, {"_id": 0}).to_list(None)
+        # Get project info from current user's project
+        project_id = current_user.get("project_id")
+        
+        # Get medicines for this project
+        med_query = {"project_id": project_id} if project_id else {}
+        medicines = await db.medicines.find(med_query, {"_id": 0}).to_list(None)
         medicine_map = {m["name"]: m for m in medicines}
         
         for idx, row in df.iterrows():
@@ -2474,8 +2478,11 @@ async def bulk_upload_surgery(
                     results["failed"] += 1
                     continue
                 
-                # Find the case
-                case = await db.cases.find_one({"case_number": case_number}, {"_id": 0})
+                # Find the case (filter by project if user has one)
+                case_query = {"case_number": case_number}
+                if project_id:
+                    case_query["project_id"] = project_id
+                case = await db.cases.find_one(case_query, {"_id": 0})
                 if not case:
                     results["errors"].append(f"Row {row_num}: Case {case_number} not found")
                     results["failed"] += 1
