@@ -257,13 +257,14 @@ class DriveUploader:
         images: List[str],
         form_type: str,
         case_number: str,
-        date: datetime = None
+        date: datetime = None,
+        project_code: str = None
     ) -> List[Optional[Dict]]:
         """Upload multiple images (up to 4)"""
         results = []
         for i, base64_data in enumerate(images[:4]):
             if base64_data:
-                result = self.upload_image(base64_data, form_type, case_number, date, i)
+                result = self.upload_image(base64_data, form_type, case_number, date, i, project_code)
                 results.append(result)
             else:
                 results.append(None)
