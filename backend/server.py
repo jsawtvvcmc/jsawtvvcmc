@@ -1399,11 +1399,20 @@ from models import FoodItem, FoodItemCreate, FoodStockAdd
 @api_router.post("/food-items", response_model=FoodItem)
 async def create_food_item(
     food_data: FoodItemCreate,
+    project_id: str = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Create a new food item"""
+    """Create a new food item for a project"""
+    # Determine project_id
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if not project_id:
+            raise HTTPException(status_code=400, detail="project_id required for Super Admin")
+    else:
+        project_id = current_user.get("project_id")
+    
     food_dict = food_data.model_dump()
     food_dict["id"] = str(uuid.uuid4())
+    food_dict["project_id"] = project_id
     food_dict["current_stock"] = 0.0
     food_dict["created_at"] = datetime.now(timezone.utc).isoformat()
     
@@ -1412,9 +1421,22 @@ async def create_food_item(
     return FoodItem(**food_dict)
 
 @api_router.get("/food-items", response_model=List[FoodItem])
-async def get_food_items(current_user: dict = Depends(get_current_user)):
-    """Get all food items"""
-    items = await db.food_items.find({}, {"_id": 0}).to_list(None)
+async def get_food_items(
+    project_id: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get food items - filtered by project"""
+    query = {}
+    
+    if current_user.get("role") == UserRole.SUPER_ADMIN.value:
+        if project_id:
+            query["project_id"] = project_id
+    else:
+        user_project_id = current_user.get("project_id")
+        if user_project_id:
+            query["project_id"] = user_project_id
+    
+    items = await db.food_items.find(query, {"_id": 0}).to_list(None)
     for item in items:
         if isinstance(item.get('created_at'), str):
             item['created_at'] = datetime.fromisoformat(item['created_at'])
@@ -1425,14 +1447,21 @@ async def add_food_stock(
     stock_data: FoodStockAdd,
     current_user: dict = Depends(get_current_user)
 ):
-    """Add food stock"""
+    """Add food stock - with project access check"""
+    # Get the food item to check project access
+    food_item = await db.food_items.find_one({"id": stock_data.food_id}, {"_id": 0})
+    if not food_item:
+        raise HTTPException(status_code=404, detail="Food item not found")
+    
+    # Check project access
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if food_item.get("project_id") != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied")
+    
     result = await db.food_items.update_one(
         {"id": stock_data.food_id},
         {"$inc": {"current_stock": stock_data.quantity}}
     )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Food item not found")
     
     return {"message": "Stock added successfully", "quantity": stock_data.quantity}
 
