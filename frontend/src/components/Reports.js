@@ -130,7 +130,7 @@ const Reports = () => {
           const imgUrl = getPhotoUrl(photo);
           console.log(`Photo URL: ${imgUrl}`); // Debug
           if (imgUrl) {
-            photoHtml += '<img src="' + imgUrl + '" class="case-image" alt="Photo" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.style.opacity=\'0.3\'; this.alt=\'Image loading...\'">';
+            photoHtml += '<img src="' + imgUrl + '" class="case-image" alt="Photo" style="max-width:80px; max-height:80px; object-fit:cover;">';
           }
         });
       }
