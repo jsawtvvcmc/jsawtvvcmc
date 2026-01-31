@@ -377,7 +377,7 @@ async def get_system_config():
 @api_router.put("/config")
 async def update_system_config(
     config_data: dict,
-    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+    current_user: dict = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ADMIN]))
 ):
     """Update system configuration"""
     # Fields that can be updated
@@ -442,7 +442,7 @@ async def update_system_config(
 async def upload_logo(
     logo_type: str,
     data: dict,
-    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+    current_user: dict = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ADMIN]))
 ):
     """Upload organization or municipal logo (base64)"""
     if logo_type not in ["organization", "municipal"]:
@@ -1165,7 +1165,7 @@ async def add_medicine_stock(
 
 @api_router.get("/medicines/stock/reset")
 async def reset_medicine_stock(
-    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+    current_user: dict = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ADMIN]))
 ):
     """Reset all medicine stock to 0 and clear logs (for fixing data issues)"""
     await db.medicines.update_many({}, {"$set": {"current_stock": 0}})
@@ -1368,7 +1368,7 @@ async def get_medicine_usage_report(
 async def update_medicine(
     medicine_id: str,
     medicine_data: dict,
-    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+    current_user: dict = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ADMIN]))
 ):
     """Update medicine details (name, generic_name, unit, packing, packing_size)"""
     # Fields that can be updated
@@ -1394,7 +1394,7 @@ async def update_medicine(
 @api_router.delete("/medicines/{medicine_id}")
 async def delete_medicine(
     medicine_id: str,
-    current_user: dict = Depends(require_roles([UserRole.SUPER_USER, UserRole.ADMIN]))
+    current_user: dict = Depends(require_roles([UserRole.SUPER_ADMIN, UserRole.ADMIN]))
 ):
     """Delete a medicine"""
     result = await db.medicines.delete_one({"id": medicine_id})
