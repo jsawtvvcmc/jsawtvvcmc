@@ -644,7 +644,7 @@ async def drive_oauth_callback(code: str, state: str = None):
         
         if not user_id:
             logger.error("OAuth callback: No valid state found, cannot link credentials to user")
-            frontend_url = os.environ.get("FRONTEND_URL", "https://pet-project-hub-1.preview.emergentagent.com")
+            frontend_url = os.environ.get("FRONTEND_URL", "https://animal-project-hub.preview.emergentagent.com")
             return RedirectResponse(url=f"{frontend_url}/settings?drive_error=Invalid OAuth state. Please try again.")
         
         # Store credentials in the USER's record directly (multi-user safe)
@@ -661,14 +661,14 @@ async def drive_oauth_callback(code: str, state: str = None):
         logger.info(f"Google Drive connected for user {user_id} ({user_email})")
         
         # Get frontend URL for redirect
-        frontend_url = os.environ.get("FRONTEND_URL", "https://pet-project-hub-1.preview.emergentagent.com")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://animal-project-hub.preview.emergentagent.com")
         
         # Redirect to settings page with success message
         return RedirectResponse(url=f"{frontend_url}/settings?drive_connected=true")
         
     except Exception as e:
         logger.error(f"OAuth callback failed: {str(e)}")
-        frontend_url = os.environ.get("FRONTEND_URL", "https://pet-project-hub-1.preview.emergentagent.com")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://animal-project-hub.preview.emergentagent.com")
         return RedirectResponse(url=f"{frontend_url}/settings?drive_error={str(e)}")
 
 @api_router.get("/drive/status")
