@@ -661,7 +661,7 @@ async def drive_oauth_callback(code: str, state: str = None):
         logger.info(f"Google Drive connected for user {user_id} ({user_email})")
         
         # Get frontend URL for redirect
-        frontend_url = os.environ.get("FRONTEND_URL", "https://animal-project-hub.preview.emergentagent.com")
+        frontend_url = os.environ["FRONTEND_URL"]
         
         # Redirect to settings page with success message
         return RedirectResponse(url=f"{frontend_url}/settings?drive_connected=true")
