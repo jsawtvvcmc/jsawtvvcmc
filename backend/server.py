@@ -668,7 +668,7 @@ async def drive_oauth_callback(code: str, state: str = None):
         
     except Exception as e:
         logger.error(f"OAuth callback failed: {str(e)}")
-        frontend_url = os.environ.get("FRONTEND_URL", "https://animal-project-hub.preview.emergentagent.com")
+        frontend_url = os.environ["FRONTEND_URL"]
         return RedirectResponse(url=f"{frontend_url}/settings?drive_error={str(e)}")
 
 @api_router.get("/drive/status")
