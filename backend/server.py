@@ -644,7 +644,7 @@ async def drive_oauth_callback(code: str, state: str = None):
         
         if not user_id:
             logger.error("OAuth callback: No valid state found, cannot link credentials to user")
-            frontend_url = os.environ.get("FRONTEND_URL", "https://animal-project-hub.preview.emergentagent.com")
+            frontend_url = os.environ["FRONTEND_URL"]
             return RedirectResponse(url=f"{frontend_url}/settings?drive_error=Invalid OAuth state. Please try again.")
         
         # Store credentials in the USER's record directly (multi-user safe)
