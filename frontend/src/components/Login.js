@@ -85,14 +85,6 @@ const Login = () => {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
-            
-            <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-200">
-              <p className="text-xs text-gray-600 text-center">
-                <strong>Default Login:</strong><br />
-                Email: manoj@janicestrust.org<br />
-                Password: Kashid@25067
-              </p>
-            </div>
           </form>
         </CardContent>
       </Card>
