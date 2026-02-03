@@ -43,7 +43,10 @@ const ProjectManagement = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (!response.ok) throw new Error('Failed to fetch projects');
+      if (!response.ok) {
+        const errorData = await response.clone().json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to fetch projects');
+      }
       const data = await response.json();
       setProjects(data);
     } catch (err) {
