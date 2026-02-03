@@ -73,7 +73,13 @@ const ProjectManagement = () => {
         body: JSON.stringify(newProject)
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.clone().json();
+      } catch (parseError) {
+        const text = await response.text();
+        throw new Error(`Server error: ${text || response.statusText}`);
+      }
       
       if (!response.ok) {
         throw new Error(data.detail || 'Failed to create project');
