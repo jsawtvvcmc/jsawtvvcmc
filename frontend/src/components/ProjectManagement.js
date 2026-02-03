@@ -43,11 +43,10 @@ const ProjectManagement = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (!response.ok) {
-        const errorData = await response.clone().json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to fetch projects');
-      }
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to fetch projects');
+      }
       setProjects(data);
     } catch (err) {
       setError(err.message);
@@ -76,13 +75,7 @@ const ProjectManagement = () => {
         body: JSON.stringify(newProject)
       });
 
-      let data;
-      try {
-        data = await response.clone().json();
-      } catch (parseError) {
-        const text = await response.text();
-        throw new Error(`Server error: ${text || response.statusText}`);
-      }
+      const data = await response.json();
       
       if (!response.ok) {
         throw new Error(data.detail || 'Failed to create project');
