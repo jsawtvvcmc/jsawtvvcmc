@@ -896,6 +896,8 @@ async def create_project(
     }
     
     await db.projects.insert_one(project)
+    # Remove _id added by MongoDB for response
+    project.pop("_id", None)
     logger.info(f"Project created: {project_code} - {project_data.project_name}")
     
     # Create admin user for this project
