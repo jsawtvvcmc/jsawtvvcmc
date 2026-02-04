@@ -464,6 +464,141 @@ const SurgeryForm = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Recent Surgeries Table */}
+      {recentSurgeries.length > 0 && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Recent Surgeries (Last 7 Days)</CardTitle>
+            <CardDescription>Click edit to modify surgery records</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Case No</th>
+                    <th className="text-left p-2">Surgery Date</th>
+                    <th className="text-left p-2">Gender</th>
+                    <th className="text-left p-2">Weight</th>
+                    <th className="text-left p-2">Skin</th>
+                    <th className="text-left p-2">Status</th>
+                    <th className="text-left p-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentSurgeries.map((record) => (
+                    <tr key={record.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2 font-medium">{record.case_number}</td>
+                      <td className="p-2">
+                        {record.surgery?.surgery_date 
+                          ? new Date(record.surgery.surgery_date).toLocaleDateString()
+                          : 'N/A'}
+                      </td>
+                      <td className="p-2">{record.initial_observation?.gender || 'N/A'}</td>
+                      <td className="p-2">{record.surgery?.weight ? `${record.surgery.weight} kg` : 'N/A'}</td>
+                      <td className="p-2">{record.surgery?.skin || 'N/A'}</td>
+                      <td className="p-2">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          record.surgery?.cancelled === 'Yes' 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {record.surgery?.cancelled === 'Yes' ? 'Cancelled' : 'Completed'}
+                        </span>
+                      </td>
+                      <td className="p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditSurgery(record)}
+                          className="h-7 w-7 p-0"
+                          data-testid={`edit-surgery-${record.id}`}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Surgery Dialog */}
+      <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Surgery Record</DialogTitle>
+            <DialogDescription>
+              Case: {editingRecord?.case_number}
+            </DialogDescription>
+          </DialogHeader>
+          {editingRecord && (
+            <div className="space-y-4">
+              <div>
+                <Label>Surgery Date *</Label>
+                <Input
+                  type="date"
+                  value={editingRecord.surgery_date}
+                  onChange={(e) => setEditingRecord({...editingRecord, surgery_date: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Weight (kg)</Label>
+                <Input
+                  type="number"
+                  min="10"
+                  max="30"
+                  step="0.1"
+                  value={editingRecord.weight}
+                  onChange={(e) => setEditingRecord({...editingRecord, weight: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Skin Condition</Label>
+                <select
+                  value={editingRecord.skin}
+                  onChange={(e) => setEditingRecord({...editingRecord, skin: e.target.value})}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="Normal">Normal</option>
+                  <option value="Rough">Rough</option>
+                  <option value="Wounded">Wounded</option>
+                </select>
+              </div>
+              <div>
+                <Label>Cancelled?</Label>
+                <select
+                  value={editingRecord.cancelled}
+                  onChange={(e) => setEditingRecord({...editingRecord, cancelled: e.target.value})}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+              {editingRecord.cancelled === 'Yes' && (
+                <div>
+                  <Label>Cancellation Reason</Label>
+                  <Input
+                    value={editingRecord.cancellation_reason}
+                    onChange={(e) => setEditingRecord({...editingRecord, cancellation_reason: e.target.value})}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingRecord(null)}>Cancel</Button>
+            <Button onClick={handleUpdateSurgery} disabled={loading} className="bg-green-600 hover:bg-green-700">
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
