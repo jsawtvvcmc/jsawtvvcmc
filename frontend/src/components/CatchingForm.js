@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -6,6 +6,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription } from './ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Pencil, X } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -18,15 +20,53 @@ const CatchingForm = () => {
   const [caseNumber, setCaseNumber] = useState('');
   const [extractingGPS, setExtractingGPS] = useState(false);
   const [fetchingAddress, setFetchingAddress] = useState(false);
+  const [recentCatchings, setRecentCatchings] = useState([]);
+  const [editingRecord, setEditingRecord] = useState(null);
+  
+  // Get today's date in local timezone for default
+  const getTodayDate = () => {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
+  };
+  
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toTimeString().slice(0, 5);
+  };
   
   const [formData, setFormData] = useState({
+    catching_date: getTodayDate(),
+    catching_time: getCurrentTime(),
     location_lat: '',
     location_lng: '',
     address: '',
     ward_number: '',
-    photos: ['', '', '', ''],  // Support up to 4 photos
+    photos: ['', '', '', ''],
     remarks: ''
   });
+
+  useEffect(() => {
+    fetchRecentCatchings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchRecentCatchings = async () => {
+    try {
+      const response = await axios.get(`${API}/cases?limit=10`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Filter to only show recent catchings (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recent = response.data.filter(c => {
+        const catchDate = new Date(c.catching?.date_time || c.created_at);
+        return catchDate >= sevenDaysAgo;
+      }).slice(0, 10);
+      setRecentCatchings(recent);
+    } catch (error) {
+      console.error('Error fetching recent catchings:', error);
+    }
+  };
 
   // Auto-fetch address when coordinates change
   const fetchAddressFromCoordinates = async (lat, lng) => {
