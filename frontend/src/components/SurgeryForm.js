@@ -168,6 +168,7 @@ const SurgeryForm = () => {
     try {
       const surgeryData = {
         case_id: formData.case_id,
+        surgery_date: formData.surgery_date,
         weight: parseFloat(formData.weight),
         gender: selectedCase?.initial_observation?.gender,
         skin: formData.skin,
