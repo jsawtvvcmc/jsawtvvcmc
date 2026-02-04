@@ -254,22 +254,34 @@ const UserManagement = () => {
                   <th className="text-left p-2">Email</th>
                   <th className="text-left p-2">Mobile</th>
                   <th className="text-left p-2">Role</th>
+                  {isSuperAdmin && <th className="text-left p-2">Project</th>}
                   <th className="text-left p-2">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2">{user.first_name} {user.last_name}</td>
-                    <td className="p-2">{user.email}</td>
-                    <td className="p-2">{user.mobile}</td>
+                {users.map((u) => (
+                  <tr key={u.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">{u.first_name} {u.last_name}</td>
+                    <td className="p-2">{u.email}</td>
+                    <td className="p-2">{u.mobile}</td>
                     <td className="p-2">
                       <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                        {user.role}
+                        {u.role}
                       </span>
                     </td>
+                    {isSuperAdmin && (
+                      <td className="p-2">
+                        {u.role === 'Super Admin' ? (
+                          <span className="text-gray-400 text-xs">All Projects</span>
+                        ) : (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                            {projects.find(p => p.id === u.project_id)?.project_code || 'N/A'}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="p-2">
-                      {user.is_active ? (
+                      {u.is_active ? (
                         <span className="text-green-600">✓ Active</span>
                       ) : (
                         <span className="text-red-600">✗ Inactive</span>
