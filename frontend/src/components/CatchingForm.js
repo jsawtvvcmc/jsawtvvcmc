@@ -575,6 +575,138 @@ const CatchingForm = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Recent Catchings Table */}
+      {recentCatchings.length > 0 && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Recent Catchings (Last 7 Days)</CardTitle>
+            <CardDescription>Click edit to modify catching records</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2">Case No</th>
+                    <th className="text-left p-2">Date/Time</th>
+                    <th className="text-left p-2">Address</th>
+                    <th className="text-left p-2">Ward</th>
+                    <th className="text-left p-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentCatchings.map((record) => (
+                    <tr key={record.id} className="border-b hover:bg-gray-50">
+                      <td className="p-2 font-medium">{record.case_number}</td>
+                      <td className="p-2">
+                        {record.catching?.date_time 
+                          ? new Date(record.catching.date_time).toLocaleString()
+                          : 'N/A'}
+                      </td>
+                      <td className="p-2 max-w-xs truncate">{record.catching?.address || 'N/A'}</td>
+                      <td className="p-2">{record.catching?.ward_number || '-'}</td>
+                      <td className="p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditCatching(record)}
+                          className="h-7 w-7 p-0"
+                          data-testid={`edit-catching-${record.id}`}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Catching Dialog */}
+      <Dialog open={!!editingRecord} onOpenChange={() => setEditingRecord(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Catching Record</DialogTitle>
+            <DialogDescription>
+              Case: {editingRecord?.case_number}
+            </DialogDescription>
+          </DialogHeader>
+          {editingRecord && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Date *</Label>
+                  <Input
+                    type="date"
+                    value={editingRecord.catching_date}
+                    onChange={(e) => setEditingRecord({...editingRecord, catching_date: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Time *</Label>
+                  <Input
+                    type="time"
+                    value={editingRecord.catching_time}
+                    onChange={(e) => setEditingRecord({...editingRecord, catching_time: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Latitude</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={editingRecord.location_lat}
+                    onChange={(e) => setEditingRecord({...editingRecord, location_lat: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Longitude</Label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={editingRecord.location_lng}
+                    onChange={(e) => setEditingRecord({...editingRecord, location_lng: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Address</Label>
+                <Input
+                  value={editingRecord.address}
+                  onChange={(e) => setEditingRecord({...editingRecord, address: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Ward Number</Label>
+                <Input
+                  value={editingRecord.ward_number}
+                  onChange={(e) => setEditingRecord({...editingRecord, ward_number: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Remarks</Label>
+                <Textarea
+                  value={editingRecord.remarks}
+                  onChange={(e) => setEditingRecord({...editingRecord, remarks: e.target.value})}
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingRecord(null)}>Cancel</Button>
+            <Button onClick={handleUpdateCatching} disabled={loading} className="bg-green-600 hover:bg-green-700">
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
