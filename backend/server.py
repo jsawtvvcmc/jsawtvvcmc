@@ -797,6 +797,96 @@ async def get_users(
             user['created_at'] = datetime.fromisoformat(user['created_at'])
     return users
 
+class UserUpdateRequest(BaseModel):
+    """Request model for updating a user"""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    mobile: Optional[str] = None
+    role: Optional[str] = None
+    project_id: Optional[str] = None
+    is_active: Optional[bool] = None
+
+@api_router.put("/users/{user_id}")
+async def update_user(
+    user_id: str,
+    update_data: UserUpdateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a user - Super Admin or Admin only"""
+    # Check permissions
+    if current_user.get("role") not in [UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Not authorized to update users")
+    
+    # Find the user to update
+    user_to_update = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Non-Super Admin can only update users in their project
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if user_to_update.get("project_id") != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Not authorized to update users from other projects")
+        # Non-Super Admin cannot change role to Super Admin
+        if update_data.role == UserRole.SUPER_ADMIN.value:
+            raise HTTPException(status_code=403, detail="Not authorized to create Super Admin users")
+    
+    # Build update dict
+    update_dict = {}
+    if update_data.first_name is not None:
+        update_dict["first_name"] = update_data.first_name
+    if update_data.last_name is not None:
+        update_dict["last_name"] = update_data.last_name
+    if update_data.mobile is not None:
+        update_dict["mobile"] = update_data.mobile
+    if update_data.role is not None:
+        update_dict["role"] = update_data.role
+    if update_data.project_id is not None:
+        update_dict["project_id"] = update_data.project_id
+    if update_data.is_active is not None:
+        update_dict["is_active"] = update_data.is_active
+    
+    if update_dict:
+        update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.users.update_one({"id": user_id}, {"$set": update_dict})
+    
+    # Return updated user
+    updated_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    return updated_user
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a user - Super Admin or Admin only"""
+    # Check permissions
+    if current_user.get("role") not in [UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Not authorized to delete users")
+    
+    # Cannot delete yourself
+    if user_id == current_user.get("id"):
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    # Find the user to delete
+    user_to_delete = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user_to_delete:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Cannot delete Super Admin users (unless you are Super Admin)
+    if user_to_delete.get("role") == UserRole.SUPER_ADMIN.value:
+        if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+            raise HTTPException(status_code=403, detail="Not authorized to delete Super Admin users")
+    
+    # Non-Super Admin can only delete users in their project
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if user_to_delete.get("project_id") != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Not authorized to delete users from other projects")
+    
+    # Delete the user
+    await db.users.delete_one({"id": user_id})
+    
+    return {"message": f"User {user_to_delete.get('first_name')} {user_to_delete.get('last_name')} deleted successfully"}
+
 # ==================== PROJECT MANAGEMENT ====================
 
 class ProjectCreateRequest(BaseModel):
