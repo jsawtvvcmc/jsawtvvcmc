@@ -275,12 +275,16 @@ const CatchingForm = () => {
     }
 
     try {
+      // Combine date and time
+      const dateTime = `${formData.catching_date}T${formData.catching_time}:00`;
+      
       const response = await axios.post(`${API}/cases/catching`, {
+        date_time: dateTime,
         location_lat: parseFloat(formData.location_lat),
         location_lng: parseFloat(formData.location_lng),
         address: formData.address,
         ward_number: formData.ward_number || null,
-        photos: formData.photos.filter(p => p),  // Send only non-empty photos
+        photos: formData.photos.filter(p => p),
         remarks: formData.remarks || null
       }, {
         headers: { Authorization: `Bearer ${token}` }
