@@ -18,6 +18,10 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [selectedProject, setSelectedProject] = useState(() => {
+    const saved = localStorage.getItem('selectedProject');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   useEffect(() => {
     if (token) {
@@ -49,6 +53,11 @@ export const AuthProvider = ({ children }) => {
       setToken(access_token);
       setUser(userData);
       localStorage.setItem('token', access_token);
+      
+      // Clear selected project on new login
+      setSelectedProject(null);
+      localStorage.removeItem('selectedProject');
+      
       return { success: true };
     } catch (error) {
       return { 
@@ -61,8 +70,28 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setToken(null);
     setUser(null);
+    setSelectedProject(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('selectedProject');
   };
+
+  const selectProject = (project) => {
+    setSelectedProject(project);
+    localStorage.setItem('selectedProject', JSON.stringify(project));
+  };
+
+  const clearProjectSelection = () => {
+    setSelectedProject(null);
+    localStorage.removeItem('selectedProject');
+  };
+
+  // Check if user needs to select a project
+  const needsProjectSelection = user?.role === 'Super Admin' && !selectedProject;
+
+  // Get effective project_id (for Super Admin it's selected project, for others it's their own)
+  const effectiveProjectId = user?.role === 'Super Admin' 
+    ? selectedProject?.id 
+    : user?.project_id;
 
   const value = {
     user,
@@ -70,7 +99,12 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    selectedProject,
+    selectProject,
+    clearProjectSelection,
+    needsProjectSelection,
+    effectiveProjectId
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
