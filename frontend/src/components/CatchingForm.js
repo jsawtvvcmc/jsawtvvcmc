@@ -294,6 +294,8 @@ const CatchingForm = () => {
       const photosUploaded = response.data.photos_uploaded || 0;
       setMessage({ type: 'success', text: `Case created successfully! Case Number: ${response.data.case_number}. ${photosUploaded} photo(s) uploaded to Google Drive.` });
       setFormData({
+        catching_date: getTodayDate(),
+        catching_time: getCurrentTime(),
         location_lat: '',
         location_lng: '',
         address: '',
@@ -301,10 +303,61 @@ const CatchingForm = () => {
         photos: ['', '', '', ''],
         remarks: ''
       });
+      fetchRecentCatchings();
     } catch (error) {
       setMessage({ 
         type: 'error', 
         text: error.response?.data?.detail || 'Failed to create case' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditCatching = (record) => {
+    const catchingDate = record.catching?.date_time 
+      ? new Date(record.catching.date_time).toISOString().split('T')[0]
+      : getTodayDate();
+    const catchingTime = record.catching?.date_time
+      ? new Date(record.catching.date_time).toTimeString().slice(0, 5)
+      : getCurrentTime();
+    
+    setEditingRecord({
+      id: record.id,
+      case_number: record.case_number,
+      catching_date: catchingDate,
+      catching_time: catchingTime,
+      location_lat: record.catching?.location?.coordinates?.[1] || '',
+      location_lng: record.catching?.location?.coordinates?.[0] || '',
+      address: record.catching?.address || '',
+      ward_number: record.catching?.ward_number || '',
+      remarks: record.catching?.remarks || ''
+    });
+  };
+
+  const handleUpdateCatching = async () => {
+    setLoading(true);
+    try {
+      const dateTime = `${editingRecord.catching_date}T${editingRecord.catching_time}:00`;
+      
+      await axios.put(`${API}/cases/${editingRecord.id}/catching`, {
+        date_time: dateTime,
+        location_lat: parseFloat(editingRecord.location_lat),
+        location_lng: parseFloat(editingRecord.location_lng),
+        address: editingRecord.address,
+        ward_number: editingRecord.ward_number || null,
+        remarks: editingRecord.remarks || null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: 'Catching record updated successfully!' });
+      setEditingRecord(null);
+      fetchRecentCatchings();
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to update catching record' 
       });
     } finally {
       setLoading(false);
@@ -343,6 +396,32 @@ const CatchingForm = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Date and Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="catching_date">Catching Date *</Label>
+                <Input
+                  id="catching_date"
+                  type="date"
+                  value={formData.catching_date}
+                  onChange={(e) => setFormData({...formData, catching_date: e.target.value})}
+                  required
+                  data-testid="catching-date-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="catching_time">Catching Time *</Label>
+                <Input
+                  id="catching_time"
+                  type="time"
+                  value={formData.catching_time}
+                  onChange={(e) => setFormData({...formData, catching_time: e.target.value})}
+                  required
+                  data-testid="catching-time-input"
+                />
+              </div>
+            </div>
+
             {/* Photo Upload - Multiple Photos */}
             <div className="p-4 bg-yellow-50 rounded-lg">
               <Label className="text-lg font-semibold">📸 Photos of Animal (4 max, first required)</Label>
