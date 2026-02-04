@@ -18,10 +18,11 @@ import Records from './components/Records';
 import Settings from './components/Settings';
 import BulkUpload from './components/BulkUpload';
 import ProjectManagement from './components/ProjectManagement';
+import ProjectSelector from './components/ProjectSelector';
 import './App.css';
 
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, needsProjectSelection, token, selectProject } = useAuth();
   
   if (loading) {
     return (
@@ -34,7 +35,16 @@ const PrivateRoute = ({ children }) => {
     );
   }
   
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  // Super Admin needs to select a project first
+  if (needsProjectSelection) {
+    return <ProjectSelector token={token} onProjectSelect={selectProject} />;
+  }
+  
+  return children;
 };
 
 const PublicRoute = ({ children }) => {
