@@ -343,13 +343,14 @@ const UserManagement = () => {
                   <th className="text-left p-2">Role</th>
                   {isSuperAdmin && <th className="text-left p-2">Project</th>}
                   <th className="text-left p-2">Status</th>
+                  <th className="text-left p-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id} className="border-b hover:bg-gray-50">
                     <td className="p-2">{u.first_name} {u.last_name}</td>
-                    <td className="p-2">{u.email}</td>
+                    <td className="p-2 text-sm">{u.email}</td>
                     <td className="p-2">{u.mobile}</td>
                     <td className="p-2">
                       <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
@@ -374,6 +375,42 @@ const UserManagement = () => {
                         <span className="text-red-600">✗ Inactive</span>
                       )}
                     </td>
+                    <td className="p-2">
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditUser(u)}
+                          className="h-7 w-7 p-0"
+                          title="Edit User"
+                          data-testid={`edit-user-${u.id}`}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleActive(u)}
+                          className={`h-7 w-7 p-0 ${u.is_active ? 'text-orange-600' : 'text-green-600'}`}
+                          title={u.is_active ? 'Deactivate User' : 'Activate User'}
+                          data-testid={`toggle-user-${u.id}`}
+                        >
+                          {u.is_active ? <UserX className="h-3 w-3" /> : <UserCheck className="h-3 w-3" />}
+                        </Button>
+                        {u.id !== user?.id && u.role !== 'Super Admin' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteConfirm(u)}
+                            className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                            title="Delete User"
+                            data-testid={`delete-user-${u.id}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -381,6 +418,112 @@ const UserManagement = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information
+            </DialogDescription>
+          </DialogHeader>
+          {editingUser && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>First Name</Label>
+                  <Input
+                    value={editingUser.first_name}
+                    onChange={(e) => setEditingUser({...editingUser, first_name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>Last Name</Label>
+                  <Input
+                    value={editingUser.last_name}
+                    onChange={(e) => setEditingUser({...editingUser, last_name: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Mobile</Label>
+                <Input
+                  value={editingUser.mobile}
+                  onChange={(e) => setEditingUser({...editingUser, mobile: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Role</Label>
+                <Select 
+                  value={editingUser.role} 
+                  onValueChange={(value) => setEditingUser({...editingUser, role: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isSuperAdmin && <SelectItem value="Super Admin">Super Admin</SelectItem>}
+                    <SelectItem value="Admin">Admin</SelectItem>
+                    <SelectItem value="Driver">Driver</SelectItem>
+                    <SelectItem value="Catcher">Catcher</SelectItem>
+                    <SelectItem value="Veterinary Doctor">Veterinary Doctor</SelectItem>
+                    <SelectItem value="Caretaker">Caretaker</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {isSuperAdmin && editingUser.role !== 'Super Admin' && (
+                <div>
+                  <Label>Project</Label>
+                  <Select 
+                    value={editingUser.project_id || ''} 
+                    onValueChange={(value) => setEditingUser({...editingUser, project_id: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.organization_shortcode}-{project.project_code}: {project.project_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>Cancel</Button>
+            <Button onClick={handleUpdateUser} disabled={loading} className="bg-green-600 hover:bg-green-700">
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {deleteConfirm?.first_name} {deleteConfirm?.last_name}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button 
+              onClick={handleDeleteUser} 
+              disabled={loading} 
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {loading ? 'Deleting...' : 'Delete User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
