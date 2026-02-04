@@ -106,6 +106,89 @@ const UserManagement = () => {
     }
   };
 
+  const handleEditUser = (userToEdit) => {
+    setEditingUser({
+      ...userToEdit,
+      first_name: userToEdit.first_name,
+      last_name: userToEdit.last_name,
+      mobile: userToEdit.mobile,
+      role: userToEdit.role,
+      project_id: userToEdit.project_id || ''
+    });
+  };
+
+  const handleUpdateUser = async () => {
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      await axios.put(`${API}/users/${editingUser.id}`, {
+        first_name: editingUser.first_name,
+        last_name: editingUser.last_name,
+        mobile: editingUser.mobile,
+        role: editingUser.role,
+        project_id: editingUser.project_id,
+        is_active: editingUser.is_active
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: 'User updated successfully!' });
+      setEditingUser(null);
+      fetchUsers();
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to update user' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (userToToggle) => {
+    try {
+      await axios.put(`${API}/users/${userToToggle.id}`, {
+        is_active: !userToToggle.is_active
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ 
+        type: 'success', 
+        text: `User ${!userToToggle.is_active ? 'activated' : 'deactivated'} successfully!` 
+      });
+      fetchUsers();
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to update user status' 
+      });
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteConfirm) return;
+    
+    setLoading(true);
+    try {
+      await axios.delete(`${API}/users/${deleteConfirm.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: 'User deleted successfully!' });
+      setDeleteConfirm(null);
+      fetchUsers();
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to delete user' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
