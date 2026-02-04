@@ -6,6 +6,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Alert, AlertDescription } from './ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import { Pencil } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -14,13 +16,21 @@ const API = `${BACKEND_URL}/api`;
 const SurgeryForm = () => {
   const { token } = useAuth();
   const [cases, setCases] = useState([]);
+  const [recentSurgeries, setRecentSurgeries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [selectedCase, setSelectedCase] = useState(null);
   const [photos, setPhotos] = useState([]);
+  const [editingRecord, setEditingRecord] = useState(null);
+  
+  // Get today's date
+  const getTodayDate = () => {
+    return new Date().toISOString().split('T')[0];
+  };
   
   const [formData, setFormData] = useState({
     case_id: '',
+    surgery_date: getTodayDate(),
     weight: '',
     skin: 'Normal',
     cancelled: 'No',
@@ -49,8 +59,28 @@ const SurgeryForm = () => {
 
   useEffect(() => {
     fetchInKennelCases();
+    fetchRecentSurgeries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchRecentSurgeries = async () => {
+    try {
+      const response = await axios.get(`${API}/cases`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Filter cases with surgery in last 7 days
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recent = response.data.filter(c => {
+        if (!c.surgery?.surgery_date) return false;
+        const surgeryDate = new Date(c.surgery.surgery_date);
+        return surgeryDate >= sevenDaysAgo;
+      }).slice(0, 10);
+      setRecentSurgeries(recent);
+    } catch (error) {
+      console.error('Error fetching recent surgeries:', error);
+    }
+  };
 
   const fetchInKennelCases = async () => {
     try {
