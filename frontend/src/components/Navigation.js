@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Building2, RefreshCw } from 'lucide-react';
 
 const Navigation = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, selectedProject, clearProjectSelection } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -73,6 +73,31 @@ const Navigation = () => {
             </div>
           </Link>
         </div>
+
+        {/* Selected Project (for Super Admin) */}
+        {user?.role === 'Super Admin' && selectedProject && (
+          <div className="p-2 border-b border-green-100 bg-green-50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1 flex-1 min-w-0">
+                <Building2 className="h-3 w-3 text-green-600 flex-shrink-0" />
+                <span className="text-[10px] font-medium text-green-800 truncate">
+                  {selectedProject.project_code}
+                </span>
+              </div>
+              <button
+                onClick={clearProjectSelection}
+                className="p-1 hover:bg-green-100 rounded text-green-600"
+                title="Switch Project"
+                data-testid="switch-project-button"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </button>
+            </div>
+            <p className="text-[9px] text-green-700 truncate mt-0.5">
+              {selectedProject.project_name}
+            </p>
+          </div>
+        )}
 
         {/* Navigation Items */}
         <nav className="p-2 flex-1 overflow-y-auto">
