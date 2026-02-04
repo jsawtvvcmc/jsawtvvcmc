@@ -1785,6 +1785,80 @@ async def get_case(
     
     return case
 
+@api_router.put("/cases/{case_id}/catching")
+async def update_catching_record(
+    case_id: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update catching record - date, location, address, etc."""
+    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Check project access
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if case.get("project_id") != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied to this case")
+    
+    # Build update dict
+    catching_update = {}
+    if "date_time" in data:
+        catching_update["catching.date_time"] = data["date_time"]
+    if "location_lat" in data and data["location_lat"]:
+        catching_update["catching.location_lat"] = data["location_lat"]
+    if "location_lng" in data and data["location_lng"]:
+        catching_update["catching.location_lng"] = data["location_lng"]
+    if "address" in data:
+        catching_update["catching.address"] = data["address"]
+    if "ward_number" in data:
+        catching_update["catching.ward_number"] = data["ward_number"]
+    if "remarks" in data:
+        catching_update["catching.remarks"] = data["remarks"]
+    
+    catching_update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.cases.update_one({"id": case_id}, {"$set": catching_update})
+    logger.info(f"Catching record updated for case {case.get('case_number')}")
+    
+    return {"message": "Catching record updated successfully"}
+
+@api_router.put("/cases/{case_id}/surgery")
+async def update_surgery_record(
+    case_id: str,
+    data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update surgery record - date, weight, skin, cancelled status, etc."""
+    case = await db.cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Check project access
+    if current_user.get("role") != UserRole.SUPER_ADMIN.value:
+        if case.get("project_id") != current_user.get("project_id"):
+            raise HTTPException(status_code=403, detail="Access denied to this case")
+    
+    # Build update dict
+    surgery_update = {}
+    if "surgery_date" in data:
+        surgery_update["surgery.surgery_date"] = data["surgery_date"]
+    if "weight" in data:
+        surgery_update["surgery.weight"] = data["weight"]
+    if "skin" in data:
+        surgery_update["surgery.skin"] = data["skin"]
+    if "cancelled" in data:
+        surgery_update["surgery.cancelled"] = data["cancelled"]
+    if "cancellation_reason" in data:
+        surgery_update["surgery.cancellation_reason"] = data["cancellation_reason"]
+    
+    surgery_update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.cases.update_one({"id": case_id}, {"$set": surgery_update})
+    logger.info(f"Surgery record updated for case {case.get('case_number')}")
+    
+    return {"message": "Surgery record updated successfully"}
+
 @api_router.post("/cases/{case_id}/initial-observation")
 async def add_initial_observation(
     case_id: str,
