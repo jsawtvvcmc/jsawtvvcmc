@@ -12,31 +12,54 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const UserManagement = () => {
-  const { token } = useAuth();
+  const { token, user, effectiveProjectId } = useAuth();
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  
+  const isSuperAdmin = user?.role === 'Super Admin';
   
   const [formData, setFormData] = useState({
     email: '',
     first_name: '',
     last_name: '',
     mobile: '',
-    role: ''
+    role: '',
+    project_id: effectiveProjectId || ''
   });
 
   useEffect(() => {
     fetchUsers();
+    if (isSuperAdmin) {
+      fetchProjects();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [effectiveProjectId]);
+
+  const fetchProjects = async () => {
+    try {
+      const response = await axios.get(`${API}/projects`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProjects(response.data);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${API}/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsers(response.data);
+      // Filter users by project if not Super Admin or if Super Admin has selected a project
+      let filteredUsers = response.data;
+      if (effectiveProjectId) {
+        filteredUsers = response.data.filter(u => u.project_id === effectiveProjectId || u.role === 'Super Admin');
+      }
+      setUsers(filteredUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -48,12 +71,25 @@ const UserManagement = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await axios.post(`${API}/users`, formData, {
+      // For non-Super Admin, always use their project_id
+      const submitData = {
+        ...formData,
+        project_id: isSuperAdmin ? formData.project_id : effectiveProjectId
+      };
+      
+      const response = await axios.post(`${API}/users`, submitData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       setMessage({ type: 'success', text: `User created successfully!` });
-      setFormData({ email: '', first_name: '', last_name: '', mobile: '', role: '' });
+      setFormData({ 
+        email: '', 
+        first_name: '', 
+        last_name: '', 
+        mobile: '', 
+        role: '',
+        project_id: effectiveProjectId || ''
+      });
       setShowForm(false);
       fetchUsers();
     } catch (error) {
