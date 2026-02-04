@@ -204,7 +204,7 @@ const SurgeryForm = () => {
       setMessage({ type: 'success', text: `Surgery record saved! Medicine stock automatically deducted.` });
       // Reset form
       setFormData({
-        case_id: '', weight: '', skin: 'Normal', cancelled: 'No', cancellation_reason: '',
+        case_id: '', surgery_date: getTodayDate(), weight: '', skin: 'Normal', cancelled: 'No', cancellation_reason: '',
         arv: 1, xylazine: 0, melonex: 0, atropine: 0, diazepam: 0, prednisolone: 0,
         ketamine: 0, tribivet: 1, intacef_tazo: 0, adrenaline: 0, alu_spray: 0,
         ethamsylate: 0, tincture: 0, avil: 1, vicryl_1: 0.20, catgut: 0.20,
@@ -213,8 +213,49 @@ const SurgeryForm = () => {
       setPhotos([]);
       setSelectedCase(null);
       fetchInKennelCases();
+      fetchRecentSurgeries();
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed to save' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditSurgery = (record) => {
+    setEditingRecord({
+      id: record.id,
+      case_number: record.case_number,
+      surgery_date: record.surgery?.surgery_date 
+        ? new Date(record.surgery.surgery_date).toISOString().split('T')[0]
+        : getTodayDate(),
+      weight: record.surgery?.weight || '',
+      skin: record.surgery?.skin || 'Normal',
+      cancelled: record.surgery?.cancelled || 'No',
+      cancellation_reason: record.surgery?.cancellation_reason || ''
+    });
+  };
+
+  const handleUpdateSurgery = async () => {
+    setLoading(true);
+    try {
+      await axios.put(`${API}/cases/${editingRecord.id}/surgery`, {
+        surgery_date: editingRecord.surgery_date,
+        weight: parseFloat(editingRecord.weight),
+        skin: editingRecord.skin,
+        cancelled: editingRecord.cancelled,
+        cancellation_reason: editingRecord.cancelled === 'Yes' ? editingRecord.cancellation_reason : null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setMessage({ type: 'success', text: 'Surgery record updated successfully!' });
+      setEditingRecord(null);
+      fetchRecentSurgeries();
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to update surgery record' 
+      });
     } finally {
       setLoading(false);
     }
