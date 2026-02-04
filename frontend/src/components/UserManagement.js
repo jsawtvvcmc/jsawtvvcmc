@@ -187,7 +187,7 @@ const UserManagement = () => {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Super Admin">Super Admin</SelectItem>
+                    {isSuperAdmin && <SelectItem value="Super Admin">Super Admin</SelectItem>}
                     <SelectItem value="Admin">Admin</SelectItem>
                     <SelectItem value="Driver">Driver</SelectItem>
                     <SelectItem value="Catcher">Catcher</SelectItem>
@@ -196,6 +196,29 @@ const UserManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Project Selection - Only for Super Admin and non-Super Admin roles */}
+              {isSuperAdmin && formData.role && formData.role !== 'Super Admin' && (
+                <div>
+                  <Label htmlFor="project">Assign to Project *</Label>
+                  <Select 
+                    onValueChange={(value) => setFormData({...formData, project_id: value})} 
+                    value={formData.project_id}
+                    required
+                  >
+                    <SelectTrigger data-testid="project-select">
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.organization_shortcode}-{project.project_code}: {project.project_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="bg-blue-50 p-3 rounded-md">
                 <p className="text-sm text-blue-800">
@@ -207,7 +230,7 @@ const UserManagement = () => {
 
               <Button 
                 type="submit" 
-                disabled={loading}
+                disabled={loading || (isSuperAdmin && formData.role !== 'Super Admin' && !formData.project_id)}
                 className="w-full bg-green-600 hover:bg-green-700"
                 data-testid="create-user-submit"
               >
