@@ -91,7 +91,17 @@ const ReleaseForm = () => {
       setFormData({ case_id: '', location_lat: '', location_lng: '', address: '', photos: ['', '', '', ''], remarks: '' });
       fetchReadyCases();
     } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed' });
+      const errorMessage = error.response?.data?.detail;
+      let displayMessage = 'Failed to release animal';
+      if (typeof errorMessage === 'string') {
+        displayMessage = errorMessage;
+      } else if (Array.isArray(errorMessage)) {
+        displayMessage = errorMessage.map(e => e.msg || e.message || JSON.stringify(e)).join(', ');
+      } else if (errorMessage) {
+        displayMessage = JSON.stringify(errorMessage);
+      }
+      console.error('Release error:', error.response?.data || error);
+      setMessage({ type: 'error', text: displayMessage });
     } finally {
       setLoading(false);
     }
