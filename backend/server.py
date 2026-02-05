@@ -760,22 +760,25 @@ async def create_user(
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # For non-Super Admin, users must have a project_id
-    project_id = user_data.project_id if hasattr(user_data, 'project_id') else current_user.get("project_id")
+    # Get project_id from request or current user
+    project_id = user_data.project_id if user_data.project_id else current_user.get("project_id")
     
-    # Generate password
-    password = generate_password(user_data.first_name, user_data.mobile)
+    # Use manual password if provided, otherwise generate
+    if user_data.password:
+        password = user_data.password
+    else:
+        password = generate_password(user_data.first_name, user_data.mobile)
     
     # Create user
-    user_dict = user_data.model_dump()
+    user_dict = user_data.model_dump(exclude={'password'})  # Exclude password from dict
     user_dict["id"] = str(uuid.uuid4())
-    user_dict["project_id"] = project_id
+    user_dict["project_id"] = project_id if project_id else None
     user_dict["password_hash"] = hash_password(password)
     user_dict["is_active"] = True
     user_dict["created_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.users.insert_one(user_dict)
-    logger.info(f"User created: {user_data.email}, Password: {password}")
+    logger.info(f"User created: {user_data.email}, Password: {'[manual]' if user_data.password else password}")
     
     user_dict.pop("password_hash")
     user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
