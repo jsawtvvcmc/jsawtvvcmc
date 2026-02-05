@@ -31,7 +31,8 @@ const UserManagement = () => {
     last_name: '',
     mobile: '',
     role: '',
-    project_id: effectiveProjectId || ''
+    project_id: effectiveProjectId || '',
+    password: ''  // Manual password (optional)
   });
 
   useEffect(() => {
