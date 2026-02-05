@@ -501,6 +501,15 @@ const UserManagement = () => {
                 />
               </div>
               <div>
+                <Label>New Password (leave blank to keep current)</Label>
+                <Input
+                  type="password"
+                  value={editingUser.password || ''}
+                  onChange={(e) => setEditingUser({...editingUser, password: e.target.value})}
+                  placeholder="Enter new password"
+                />
+              </div>
+              <div>
                 <Label>Role</Label>
                 <Select 
                   value={editingUser.role} 
