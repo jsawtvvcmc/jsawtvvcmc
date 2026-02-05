@@ -844,8 +844,9 @@ async def update_user(
         update_dict["mobile"] = update_data.mobile
     if update_data.role is not None:
         update_dict["role"] = update_data.role
+    # Handle project_id - allow empty string to clear, or set new value
     if update_data.project_id is not None:
-        update_dict["project_id"] = update_data.project_id
+        update_dict["project_id"] = update_data.project_id if update_data.project_id else None
     if update_data.is_active is not None:
         update_dict["is_active"] = update_data.is_active
     
