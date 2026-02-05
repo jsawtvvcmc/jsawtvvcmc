@@ -58,10 +58,21 @@ const UserManagement = () => {
       const response = await axios.get(`${API}/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Filter users by project if not Super Admin or if Super Admin has selected a project
+      // Filter users by project if Super Admin has selected a project
       let filteredUsers = response.data;
-      if (effectiveProjectId) {
-        filteredUsers = response.data.filter(u => u.project_id === effectiveProjectId || u.role === 'Super Admin');
+      if (isSuperAdmin && effectiveProjectId) {
+        // Show users belonging to selected project, users without project, and Super Admins
+        filteredUsers = response.data.filter(u => 
+          u.project_id === effectiveProjectId || 
+          !u.project_id || 
+          u.role === 'Super Admin'
+        );
+      } else if (!isSuperAdmin) {
+        // Non-Super Admin sees only their project users
+        filteredUsers = response.data.filter(u => 
+          u.project_id === effectiveProjectId || 
+          u.role === 'Super Admin'
+        );
       }
       setUsers(filteredUsers);
     } catch (error) {
