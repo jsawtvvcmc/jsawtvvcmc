@@ -744,9 +744,13 @@ async def test_drive_upload(current_user: dict = Depends(get_current_user)):
 @api_router.post("/users", response_model=User)
 async def create_user(
     user_data: UserCreate,
-    current_user: dict = Depends(lambda creds: require_roles([UserRole.SUPER_ADMIN, UserRole.ADMIN])(creds))
+    current_user: dict = Depends(get_current_user)
 ):
     """Create a new user"""
+    # Check authorization
+    if current_user.get("role") not in [UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value]:
+        raise HTTPException(status_code=403, detail="Not authorized to create users")
+    
     from utils import generate_password
     
     # Check if email already exists
