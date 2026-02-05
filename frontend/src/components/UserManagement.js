@@ -69,6 +69,20 @@ const UserManagement = () => {
     }
   };
 
+  const getErrorMessage = (error) => {
+    const detail = error.response?.data?.detail;
+    if (!detail) return 'Failed to create user';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      // Pydantic validation errors
+      return detail.map(err => err.msg || err.message || JSON.stringify(err)).join(', ');
+    }
+    if (typeof detail === 'object') {
+      return detail.msg || detail.message || JSON.stringify(detail);
+    }
+    return 'Failed to create user';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -99,7 +113,7 @@ const UserManagement = () => {
     } catch (error) {
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.detail || 'Failed to create user' 
+        text: getErrorMessage(error)
       });
     } finally {
       setLoading(false);
