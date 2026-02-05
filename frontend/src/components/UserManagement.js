@@ -141,7 +141,8 @@ const UserManagement = () => {
       last_name: userToEdit.last_name,
       mobile: userToEdit.mobile,
       role: userToEdit.role,
-      project_id: userToEdit.project_id || ''
+      project_id: userToEdit.project_id || '',
+      password: ''  // New password field (empty by default)
     });
   };
 
@@ -150,14 +151,21 @@ const UserManagement = () => {
     setMessage({ type: '', text: '' });
 
     try {
-      await axios.put(`${API}/users/${editingUser.id}`, {
+      const updateData = {
         first_name: editingUser.first_name,
         last_name: editingUser.last_name,
         mobile: editingUser.mobile,
         role: editingUser.role,
-        project_id: editingUser.project_id,
+        project_id: editingUser.project_id || null,
         is_active: editingUser.is_active
-      }, {
+      };
+      
+      // Only include password if it's been changed
+      if (editingUser.password) {
+        updateData.password = editingUser.password;
+      }
+      
+      await axios.put(`${API}/users/${editingUser.id}`, updateData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
