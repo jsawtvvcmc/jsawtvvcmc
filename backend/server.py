@@ -2359,14 +2359,20 @@ async def add_release_record(
     
     release = {
         "date_time": data.get("date_time", datetime.now(timezone.utc).isoformat()),
-        "location_lat": data["location_lat"],
-        "location_lng": data["location_lng"],
+        "location_lat": float(data["location_lat"]) if data.get("location_lat") else None,
+        "location_lng": float(data["location_lng"]) if data.get("location_lng") else None,
         "address": data["address"],
         "photo_links": photo_links,
         "photo_base64": data.get("photo_base64") if not photo_links else None,
         "released_by": current_user["id"],
         "remarks": data.get("remarks")
     }
+    
+    # Validate coordinates are reasonable
+    if release["location_lat"] and (release["location_lat"] < -90 or release["location_lat"] > 90):
+        raise HTTPException(status_code=400, detail=f"Invalid latitude: {release['location_lat']}. Must be between -90 and 90.")
+    if release["location_lng"] and (release["location_lng"] < -180 or release["location_lng"] > 180):
+        raise HTTPException(status_code=400, detail=f"Invalid longitude: {release['location_lng']}. Must be between -180 and 180.")
     
     await db.cases.update_one(
         {"id": case_id},
