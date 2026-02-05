@@ -343,11 +343,22 @@ const UserManagement = () => {
                 </div>
               )}
 
+              {/* Password field */}
+              <div>
+                <Label htmlFor="password">Password (Optional - leave blank for auto-generated)</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  placeholder="Enter password or leave blank"
+                  data-testid="password-input"
+                />
+              </div>
+
               <div className="bg-blue-50 p-3 rounded-md">
                 <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> Password will be auto-generated as: FirstName#Last4DigitsOfMobile
-                  <br />
-                  Example: {formData.first_name || 'John'}#{formData.mobile.slice(-4) || '1234'}
+                  <strong>Note:</strong> {formData.password ? 'Using custom password' : `Auto-generated password: ${formData.first_name || 'FirstName'}#${formData.mobile.slice(-4) || '1234'}`}
                 </p>
               </div>
 
