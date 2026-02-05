@@ -850,6 +850,9 @@ async def update_user(
         update_dict["project_id"] = update_data.project_id if update_data.project_id else None
     if update_data.is_active is not None:
         update_dict["is_active"] = update_data.is_active
+    # Handle password update
+    if update_data.password:
+        update_dict["password_hash"] = hash_password(update_data.password)
     
     if update_dict:
         update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
