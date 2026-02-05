@@ -104,7 +104,8 @@ const UserManagement = () => {
       // For non-Super Admin, always use their project_id
       const submitData = {
         ...formData,
-        project_id: isSuperAdmin ? formData.project_id : effectiveProjectId
+        project_id: isSuperAdmin ? formData.project_id : effectiveProjectId,
+        password: formData.password || undefined  // Only send if provided
       };
       
       const response = await axios.post(`${API}/users`, submitData, {
@@ -118,7 +119,8 @@ const UserManagement = () => {
         last_name: '', 
         mobile: '', 
         role: '',
-        project_id: effectiveProjectId || ''
+        project_id: effectiveProjectId || '',
+        password: ''
       });
       setShowForm(false);
       fetchUsers();
