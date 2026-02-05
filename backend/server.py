@@ -200,6 +200,8 @@ class UserCreate(BaseModel):
     last_name: str
     mobile: str
     role: UserRole
+    project_id: Optional[str] = None
+    password: Optional[str] = None  # Manual password (optional, auto-generated if not provided)
 
 class UserInDB(User):
     password_hash: str
