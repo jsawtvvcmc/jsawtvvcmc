@@ -153,7 +153,7 @@ const UserManagement = () => {
     } catch (error) {
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.detail || 'Failed to update user' 
+        text: getErrorMessage(error)
       });
     } finally {
       setLoading(false);
@@ -176,7 +176,7 @@ const UserManagement = () => {
     } catch (error) {
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.detail || 'Failed to update user status' 
+        text: getErrorMessage(error)
       });
     }
   };
@@ -196,7 +196,7 @@ const UserManagement = () => {
     } catch (error) {
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.detail || 'Failed to delete user' 
+        text: getErrorMessage(error) 
       });
     } finally {
       setLoading(false);
