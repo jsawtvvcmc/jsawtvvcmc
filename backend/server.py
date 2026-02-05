@@ -809,6 +809,7 @@ class UserUpdateRequest(BaseModel):
     role: Optional[str] = None
     project_id: Optional[str] = None
     is_active: Optional[bool] = None
+    password: Optional[str] = None  # New password (optional)
 
 @api_router.put("/users/{user_id}")
 async def update_user(
