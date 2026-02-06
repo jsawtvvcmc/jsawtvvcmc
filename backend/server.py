@@ -1901,6 +1901,13 @@ async def add_initial_observation(
         raise HTTPException(status_code=400, detail="Kennel not available")
     
     # Update case
+    # Accept observation_date from frontend, default to now if not provided
+    obs_date = data.get("observation_date")
+    if obs_date:
+        observation_date = obs_date
+    else:
+        observation_date = datetime.now(timezone.utc).isoformat()
+    
     observation = {
         "kennel_number": data["kennel_number"],
         "gender": data["gender"],
@@ -1913,7 +1920,7 @@ async def add_initial_observation(
         "photo_base64": data["photo_base64"],
         "remarks": data.get("remarks"),
         "catcher_id": current_user["id"],
-        "observation_date": datetime.now(timezone.utc).isoformat()
+        "observation_date": observation_date
     }
     
     await db.cases.update_one(
