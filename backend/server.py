@@ -2267,7 +2267,7 @@ async def create_daily_feeding(
     feeding = {
         "id": str(uuid.uuid4()),
         "project_id": project_id,
-        "date": data.get("date", datetime.now(timezone.utc).isoformat()),
+        "date": data.get("feeding_date") or data.get("date", datetime.now(timezone.utc).isoformat()),
         "meal_time": data["meal_time"],
         "kennel_numbers": data["kennel_numbers"],
         "food_items": data["food_items"],
