@@ -146,6 +146,7 @@ const DailyTreatment = () => {
       };
       
       const response = await axios.post(`${API}/cases/${formData.case_id}/treatment`, {
+        treatment_date: formData.treatment_date,
         day_post_surgery: parseInt(formData.day_post_surgery),
         medicines_used: medicines_used,
         wound_condition: formData.wound_condition,
