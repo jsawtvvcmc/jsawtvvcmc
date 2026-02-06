@@ -79,6 +79,7 @@ const DailyFeeding = () => {
 
     try {
       const response = await axios.post(`${API}/daily-feeding`, {
+        feeding_date: feedingDate,
         meal_time: mealTime,
         kennel_numbers: selectedKennels,
         food_items: selectedFood,
@@ -93,6 +94,7 @@ const DailyFeeding = () => {
       setSelectedKennels([]);
       setSelectedFood({});
       setPhotos(['', '', '', '']);
+      setFeedingDate(new Date().toISOString().split('T')[0]);
       fetchFoodItems();
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'Failed' });
