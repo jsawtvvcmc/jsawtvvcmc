@@ -111,15 +111,27 @@ const DailyFeeding = () => {
         <CardHeader><CardTitle>Record Feeding</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label>Meal Time *</Label>
-              <Select value={mealTime} onValueChange={setMealTime}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Morning">Morning</SelectItem>
-                  <SelectItem value="Evening">Evening</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Feeding Date *</Label>
+                <Input
+                  type="date"
+                  value={feedingDate}
+                  onChange={(e) => setFeedingDate(e.target.value)}
+                  required
+                  data-testid="feeding-date-input"
+                />
+              </div>
+              <div>
+                <Label>Meal Time *</Label>
+                <Select value={mealTime} onValueChange={setMealTime}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Morning">Morning</SelectItem>
+                    <SelectItem value="Evening">Evening</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
               <Label>Select Kennels ({kennels.length} occupied)</Label>
