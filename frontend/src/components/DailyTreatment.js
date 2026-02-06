@@ -171,6 +171,7 @@ const DailyTreatment = () => {
       });
       setFormData({
         case_id: '',
+        treatment_date: new Date().toISOString().split('T')[0],
         day_post_surgery: 1,
         wound_condition: 'Normal Healing',
         food_intake: true,
