@@ -165,6 +165,30 @@ const InitialObservations = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Date and Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Observation Date *</Label>
+                <Input
+                  type="date"
+                  value={formData.observation_date}
+                  onChange={(e) => setFormData({...formData, observation_date: e.target.value})}
+                  required
+                  data-testid="observation-date-input"
+                />
+              </div>
+              <div>
+                <Label>Observation Time *</Label>
+                <Input
+                  type="time"
+                  value={formData.observation_time}
+                  onChange={(e) => setFormData({...formData, observation_time: e.target.value})}
+                  required
+                  data-testid="observation-time-input"
+                />
+              </div>
+            </div>
+
             {/* Case Selection */}
             <div className="p-4 bg-green-50 rounded-lg">
               <Label>Select Case *</Label>
