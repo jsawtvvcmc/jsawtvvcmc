@@ -20,6 +20,7 @@ const DailyFeeding = () => {
   const [selectedKennels, setSelectedKennels] = useState([]);
   const [selectedFood, setSelectedFood] = useState({});
   const [mealTime, setMealTime] = useState('Morning');
+  const [feedingDate, setFeedingDate] = useState(new Date().toISOString().split('T')[0]);
   const [photos, setPhotos] = useState(['', '', '', '']);
 
   useEffect(() => {
