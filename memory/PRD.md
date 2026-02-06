@@ -236,4 +236,38 @@ All collections filtered by `project_id`:
    - Monthly Log: CSV export with summary statistics
 
 ### Known Issues
-- **Google Drive Multi-User** - Single token.json not suitable for multiple users
+- ~~**Google Drive Multi-User** - Single token.json not suitable for multiple users~~ ✅ FIXED
+
+---
+
+## Session Updates - Feb 6, 2026
+
+### Completed Features
+
+1. **Editable Dates in Forms** ✅
+   - **Daily Feeding**: Added `feeding_date` editable field (defaults to today)
+   - **Release Form**: Added `release_date` and `release_time` editable fields
+   - **Daily Treatment**: Added `treatment_date` editable field
+   - Backend updated to accept frontend field names (`feeding_date`, `treatment_date`, `date_time`)
+
+2. **User Management Enhancements** (Previous Session) ✅
+   - Project selector for Superadmins on login
+   - User assignment to projects
+   - Edit/Delete user functionality
+   - Manual password entry on user creation
+
+3. **Collapsible Operations Menu** ✅
+   - Navigation sidebar groups Catching, Observations, Surgery, Treatment, Feeding, Release, Records under "Operations"
+
+4. **Editable Catching/Surgery Records** (Previous Session) ✅
+   - Tables showing recent catchings and surgeries in their respective forms
+   - Edit functionality for individual records
+
+### Pending Issues (P2)
+- **Photos on Reports**: Images not displaying on Catching Sheet and Case Paper reports
+- **GPS EXIF Extraction**: Auto-detection of GPS coordinates from photo metadata not working
+
+### Next Steps
+- Deploy to Emergent platform with custom domain `j-app.in`
+- Backend refactoring (split server.py into modules)
+- PWA conversion for mobile
