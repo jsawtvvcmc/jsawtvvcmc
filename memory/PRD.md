@@ -248,7 +248,8 @@ All collections filtered by `project_id`:
    - **Daily Feeding**: Added `feeding_date` editable field (defaults to today)
    - **Release Form**: Added `release_date` and `release_time` editable fields
    - **Daily Treatment**: Added `treatment_date` editable field
-   - Backend updated to accept frontend field names (`feeding_date`, `treatment_date`, `date_time`)
+   - **Initial Observations**: Added `observation_date` and `observation_time` editable fields
+   - Backend updated to accept frontend field names (`feeding_date`, `treatment_date`, `date_time`, `observation_date`)
 
 2. **User Management Enhancements** (Previous Session) ✅
    - Project selector for Superadmins on login
