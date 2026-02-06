@@ -2158,7 +2158,7 @@ async def add_daily_treatment(
     treatment = {
         "id": str(uuid.uuid4()),
         "case_id": case_id,
-        "date": data.get("date", datetime.now(timezone.utc).isoformat()),
+        "date": data.get("treatment_date") or data.get("date", datetime.now(timezone.utc).isoformat()),
         "day_post_surgery": data["day_post_surgery"],
         # Support both old format (medicine IDs) and new format (medicines_used dict)
         "medicines_used": data.get("medicines_used", {}),
