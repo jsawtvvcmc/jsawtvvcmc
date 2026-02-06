@@ -2130,7 +2130,9 @@ async def add_daily_treatment(
     drive_uploader = await get_drive_uploader_for_user(db, current_user)
     
     if drive_uploader and data.get("photos"):
-        treatment_date = datetime.fromisoformat(data.get("date", datetime.now(timezone.utc).isoformat()).replace('Z', '+00:00')) if data.get("date") else datetime.now(timezone.utc)
+        # Accept both 'treatment_date' (from frontend) and 'date' (legacy)
+        date_str = data.get("treatment_date") or data.get("date")
+        treatment_date = datetime.fromisoformat(date_str.replace('Z', '+00:00')) if date_str else datetime.now(timezone.utc)
         
         for i, photo in enumerate(data.get("photos", [])[:4]):
             if photo:
