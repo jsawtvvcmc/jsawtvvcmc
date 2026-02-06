@@ -229,6 +229,18 @@ const DailyTreatment = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Treatment Date */}
+            <div>
+              <Label>Treatment Date *</Label>
+              <Input
+                type="date"
+                value={formData.treatment_date}
+                onChange={(e) => setFormData({...formData, treatment_date: e.target.value})}
+                required
+                data-testid="treatment-date-input"
+              />
+            </div>
+            
             {/* Case Selection */}
             <div className="p-4 bg-green-50 rounded-lg">
               <Label>Select Case *</Label>
