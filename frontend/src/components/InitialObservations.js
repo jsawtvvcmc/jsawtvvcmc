@@ -125,6 +125,8 @@ const InitialObservations = () => {
       setMessage({ type: 'success', text: 'Initial observation added successfully!' });
       setFormData({
         case_id: '',
+        observation_date: new Date().toISOString().split('T')[0],
+        observation_time: new Date().toTimeString().slice(0, 5),
         kennel_number: '',
         gender: '',
         approximate_age: 'Adult 2-8 years',
