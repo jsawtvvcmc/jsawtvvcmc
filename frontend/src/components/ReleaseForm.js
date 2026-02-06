@@ -19,6 +19,8 @@ const ReleaseForm = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
     case_id: '',
+    release_date: new Date().toISOString().split('T')[0],
+    release_time: new Date().toTimeString().slice(0, 5),
     location_lat: '',
     location_lng: '',
     address: '',
