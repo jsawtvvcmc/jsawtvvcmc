@@ -80,7 +80,10 @@ const ReleaseForm = () => {
     setMessage({ type: '', text: '' });
 
     try {
+      const dateTime = `${formData.release_date}T${formData.release_time}:00`;
+      
       const response = await axios.post(`${API}/cases/${formData.case_id}/release`, {
+        date_time: dateTime,
         location_lat: parseFloat(formData.location_lat),
         location_lng: parseFloat(formData.location_lng),
         address: formData.address,
@@ -90,7 +93,16 @@ const ReleaseForm = () => {
       
       const photosUploaded = response.data.photos_uploaded || 0;
       setMessage({ type: 'success', text: `Animal released successfully! ${photosUploaded} photo(s) uploaded to Drive.` });
-      setFormData({ case_id: '', location_lat: '', location_lng: '', address: '', photos: ['', '', '', ''], remarks: '' });
+      setFormData({ 
+        case_id: '', 
+        release_date: new Date().toISOString().split('T')[0],
+        release_time: new Date().toTimeString().slice(0, 5),
+        location_lat: '', 
+        location_lng: '', 
+        address: '', 
+        photos: ['', '', '', ''], 
+        remarks: '' 
+      });
       fetchReadyCases();
     } catch (error) {
       const errorMessage = error.response?.data?.detail;
@@ -117,6 +129,30 @@ const ReleaseForm = () => {
         <CardHeader><CardTitle>Release Animal</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Date and Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Release Date *</Label>
+                <Input
+                  type="date"
+                  value={formData.release_date}
+                  onChange={(e) => setFormData({...formData, release_date: e.target.value})}
+                  required
+                  data-testid="release-date-input"
+                />
+              </div>
+              <div>
+                <Label>Release Time *</Label>
+                <Input
+                  type="time"
+                  value={formData.release_time}
+                  onChange={(e) => setFormData({...formData, release_time: e.target.value})}
+                  required
+                  data-testid="release-time-input"
+                />
+              </div>
+            </div>
+            
             <div>
               <Label>Select Case *</Label>
               <Select value={formData.case_id} onValueChange={(value) => setFormData({...formData, case_id: value})} required>
