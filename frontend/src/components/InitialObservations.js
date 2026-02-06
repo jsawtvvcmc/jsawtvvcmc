@@ -104,7 +104,10 @@ const InitialObservations = () => {
     }
 
     try {
+      const observationDateTime = `${formData.observation_date}T${formData.observation_time}:00`;
+      
       await axios.post(`${API}/cases/${formData.case_id}/initial-observation`, {
+        observation_date: observationDateTime,
         kennel_number: parseInt(formData.kennel_number),
         gender: formData.gender,
         approximate_age: formData.approximate_age,
